@@ -1,5 +1,4 @@
-
-dorossii
+# dorossii
 
 認証方法のテンプレートをまとめたリポジトリ
 
@@ -36,6 +35,11 @@ dorossii
 - auth コンテナが起動します
 - app コンテナが起動します
 - nginx コンテナが起動します
+
+## バックエンドを実行するとき
+
+- ``docker compose exec app bash`` でコンテナ内に入る
+- ``go run main.go`` で実行する
 
 ## ディレクトリ構成
 
