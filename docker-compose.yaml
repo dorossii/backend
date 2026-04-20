@@ -20,12 +20,16 @@ services:
       target: develop
     volumes:
       - ./backend/src:/app
+    env_file:
+      - ./config/app.env
+      - ./openssl/jwtKeys/public.env
     tty: true
     restart: always
   auth:
     image: ghcr.io/mattuu0/authbase/auth:latest
     env_file:
       - ./config/auth.env
+      - ./openssl/jwtKeys/private.env
     restart: always
     volumes:
       - ./auth/icons:/assets/icons

@@ -53,12 +53,16 @@ async function Init() {
             await auth.UpdateIcon(fileInput.files[0]);
         });
 
-        // アクセスしてみる
-        const res = await auth.Get('/app/',{
-            'Content-Type': 'application/json',
-        });
+        try {
+            // アクセスしてみる
+            const res = await auth.Get('/app/authed',{
+                'Content-Type': 'application/json',
+            });
 
-        console.log(res);
+            console.log(res);
+        } catch (error) {
+            console.error(error);
+        }
     } catch (error) {
         console.error(error);
         // ログインにリダイレクト
