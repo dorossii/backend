@@ -39,7 +39,7 @@
 ## バックエンドを実行するとき
 
 - ``docker compose exec app bash`` でコンテナ内に入る
-- ``go run main.go`` で実行する
+- ``go run .`` で実行する
 
 ## ディレクトリ構成
 

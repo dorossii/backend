@@ -25,6 +25,10 @@ services:
       - ./openssl/jwtKeys/public.env
     tty: true
     restart: always
+    depends_on:
+      # マイグレーションが終わるまで
+      migrate:
+        condition: service_completed_successfully
   auth:
     image: ghcr.io/mattuu0/authbase/auth:latest
     env_file:
