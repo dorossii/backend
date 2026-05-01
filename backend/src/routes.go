@@ -30,7 +30,7 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		user.PUT("/lifestyle", TempController)
 
 		// タスクグループ
-		task := router.Group("/task")
+		task := user.Group("/task")
 		{
 			// タスク取得
 			task.GET("/", TempController)
