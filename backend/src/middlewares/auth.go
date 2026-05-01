@@ -4,12 +4,12 @@ import (
 	"backend/logger"
 	"net/http"
 
-	"github.com/labstack/echo/v5"
+	"github.com/labstack/echo/v4"
 )
 
 // 認証ミドルウェア
 func RequireAuth(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(ctx *echo.Context) error {
+	return func(ctx echo.Context) error {
 		// ヘッダからトークンを取得
 		token := ctx.Request().Header.Get("Authorization")
 		if token == "" {
