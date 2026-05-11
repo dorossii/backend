@@ -33,19 +33,19 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		task := user.Group("/task")
 		{
 			// タスク取得
-			task.GET("/", TempController)
+			task.GET("", TempController)
 
 			// タスク詳細取得
-			task.GET("/:task_id", TempController)
+			task.GET("/:id", TempController)
 
 			// タスク写真のアップロード
-			task.POST("/:task_id/image", TempController)
+			task.POST("/:id/image", TempController)
 
 			// タスク煽りメッセージ
-			task.POST("/:task_id/message", TempController)
+			task.POST("/:id/message", TempController)
 
 			// 写真確認
-			task.GET("/:task_id/image", TempController)
+			task.GET("/:id/image", TempController)
 
 			// タスクのステータス更新
 			task.PUT("/:task_id", TempController)
@@ -59,7 +59,7 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 	friend := router.Group("/friend")
 	{
 		// フレンド一覧取得
-		friend.GET("/", TempController)
+		friend.GET("", TempController)
 
 		// フレンド招待
 		friend.GET("/invite", TempController)
@@ -68,7 +68,7 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		friend.POST("/accept", TempController)
 
 		// フレンド削除
-		friend.DELETE("/:friend_id", TempController)
+		friend.DELETE("/:id", TempController)
 
 		// 嫌がらせする人の設定
 		friend.PUT("/attack", TempController)
