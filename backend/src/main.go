@@ -2,6 +2,7 @@ package main
 
 import (
 	"backend/middlewares"
+	"backend/models"
 	"net/http"
 
 	"github.com/labstack/echo/v5"
@@ -9,6 +10,9 @@ import (
 )
 
 func main() {
+	// モデル初期化
+	models.Init()
+	
 	router := echo.New()
 	router.Use(middleware.RequestLogger())
 	router.Use(middleware.Recover())
