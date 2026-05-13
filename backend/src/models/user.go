@@ -9,6 +9,7 @@ type User struct {
 	Mailadress  string    `json:"Mailadress"`                 // ユーザのメールアドレス
 	HealthPoint int       `json:"HealthPoint"; default:"100"` // ユーザの体力
 	DirtLevel   int       `json:"DirtLevel"; default:"0"`     // ユーザの汚れレベル
+	Combo				int				`json:"Combo"; default:"0"`
 	TargetUser  string    `json:"TargetUser"`                 // 嫌がらせ対象のユーザのUserID
 	BgColor     string    `json:"BgColor"; default:"#ffb6c1"` // ユーザの背景色
 }
