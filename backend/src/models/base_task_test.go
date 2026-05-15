@@ -3,15 +3,17 @@ package models_test
 import (
 	"backend/models"
 	"testing"
+
+	"gorm.io/gorm"
 )
 
 func TestBaseTask(t *testing.T) {
-	models.Init()	// TODO: test毎に接続するのはキモい気がする。
+	models.Init() // TODO: test毎に接続するのはキモい気がする。
 
 	// テーブル初期化
-	err := models.DB.Exec(
-		"DELETE FROM base_tasks",
-	).Error
+	err := models.DB.
+		Session(&gorm.Session{AllowGlobalUpdate: true}).
+		Delete(&models.BaseTask{}).Error
 
 	if err != nil {
 		t.Fatal(err)
@@ -48,7 +50,7 @@ func TestBaseTask(t *testing.T) {
 			TaskName:        "ゴミを出す",
 			DifficultyLevel: 1,
 			DueTime:         3,
-			ImageFlag:       false,	
+			ImageFlag:       false,
 			Tags:            models.TaskTagTrash,
 		},
 	}

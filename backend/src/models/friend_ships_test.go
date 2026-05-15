@@ -3,15 +3,17 @@ package models_test
 import (
 	"backend/models"
 	"testing"
+
+	"gorm.io/gorm"
 )
 
 func TestFriendShips(t *testing.T) {
 	models.Init()
 
 	// テーブル初期化
-	err := models.DB.Exec(
-		"DELETE FROM friend_ships",
-	).Error
+	err := models.DB.
+		Session(&gorm.Session{AllowGlobalUpdate: true}).
+		Delete(&models.FriendShips{}).Error
 
 	if err != nil {
 		t.Fatal(err)

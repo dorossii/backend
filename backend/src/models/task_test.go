@@ -4,15 +4,17 @@ import (
 	"backend/models"
 	"testing"
 	"time"
+
+	"gorm.io/gorm"
 ) 
 
 func TestTask(t *testing.T) {
 	models.Init() // TODO: test毎に接続するのはキモい気がする。
 
 	// テーブル初期化
-	err := models.DB.Exec(
-		"DELETE FROM tasks",
-	).Error
+	err := models.DB.
+		Session(&gorm.Session{AllowGlobalUpdate: true}).
+		Delete(&models.Task{}).Error
 
 	if err != nil {
 		t.Fatal(err)
