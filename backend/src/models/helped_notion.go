@@ -3,8 +3,9 @@ package models
 import "time"
 
 type HelpedNotice struct {
-	TargetID  string    `json:"TargetID" gorm:"primaryKey"` // タスクしてない側ID
-	HelperID  string    `json:"HelperID" gorm:"primaryKey"` // 助ける側ID
+	NoticeID  string    `json:"NoticeID" gorm:"primaryKey"`  // 通知ID
+	TargetID  string    `json:"TargetID"`                    // タスクしてない側ID
+	HelperID  string    `json:"HelperID"`                    // 助ける側ID
 	IsRead    bool      `json:"IsRead" gorm:"default:false"` // 既読状態
-	CreatedAt time.Time `json:"CreatedAt"` // 作成時間
+	CreatedAt time.Time `json:"CreatedAt"`                   // 作成時間
 }
