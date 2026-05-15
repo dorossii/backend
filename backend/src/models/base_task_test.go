@@ -5,8 +5,8 @@ import (
 	"testing"
 )
 
-func TestBaseTask_CreateAndFind(t *testing.T) {
-	models.Init()
+func TestBaseTask(t *testing.T) {
+	models.Init()	// TODO: test毎に接続するのはキモい気がする。
 
 	// テーブル初期化
 	err := models.DB.Exec(
