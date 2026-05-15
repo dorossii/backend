@@ -53,3 +53,9 @@
 - ``task setup`` : セットアップ
 - ``task clean`` : コンテナ落として全て削除
 - ``task down`` : コンテナ落とす
+
+## テストを実行するとき
+
+- `docker compose exec app bash` でコンテナ内に入る
+- `cd models` で models ディレクトリへ移動
+- `go test -v` でテストを実行
