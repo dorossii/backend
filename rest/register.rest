@@ -1,0 +1,2 @@
+POST https://localhost:8947/app/user/register
+Content-Type: application/json

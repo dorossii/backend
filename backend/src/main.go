@@ -2,11 +2,10 @@ package main
 
 import (
 	"backend/middlewares"
-	"backend/models"
 	"net/http"
 
-	"github.com/labstack/echo/v5"
-	"github.com/labstack/echo/v5/middleware"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 func main() {
@@ -14,17 +13,20 @@ func main() {
 	models.Init()
 	
 	router := echo.New()
-	router.Use(middleware.RequestLogger())
+	router.Use(middleware.Logger())
 	router.Use(middleware.Recover())
 
 	// ミドルウェア初期化
 	middlewares.Init()
 
-	router.GET("/", func(ctx *echo.Context) error {
+	// ルーティングの設定を追加
+	router = InitRouter(router)
+
+	router.GET("/", func(ctx echo.Context) error {
 		return ctx.String(http.StatusOK, "Hello, World!")
 	})
 
-	router.GET("/authed", middlewares.RequireAuth(func(ctx *echo.Context) error {
+	router.GET("/authed", middlewares.RequireAuth(func(ctx echo.Context) error {
 		return ctx.JSON(http.StatusOK,map[string]string{"message": "authed"})
 	}))
 
