@@ -9,7 +9,7 @@ const (
 )
 
 type FriendShips struct {
-	UserID   string       `json:"UserID"; gorm:"primaryKey"`   // ユーザのID
-	FriendID string       `json:"FriendID"; gorm:"primaryKey"` // 友達のユーザID
+	UserID   string       `json:"UserID" gorm:"primaryKey"`   // ユーザのID
+	FriendID string       `json:"FriendID" gorm:"primaryKey"` // 友達のユーザID
 	Status   FriendStatus `json:"Status"`                      // 友達関係の状態
 }
