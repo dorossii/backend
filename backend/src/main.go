@@ -2,6 +2,7 @@ package main
 
 import (
 	"backend/middlewares"
+	"backend/models"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
