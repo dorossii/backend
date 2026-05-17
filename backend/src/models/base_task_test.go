@@ -24,6 +24,7 @@ func TestBaseTask(t *testing.T) {
 		{
 			TaskID:          "task-001",
 			TaskName:        "部屋掃除",
+			Description: "部屋を掃除するタスク",
 			DifficultyLevel: 3,
 			DueTime:         3,
 			ImageFlag:       true,
@@ -32,6 +33,7 @@ func TestBaseTask(t *testing.T) {
 		{
 			TaskID:          "task-002",
 			TaskName:        "洗濯物を干す",
+			Description: "洗濯物を干すタスク",
 			DifficultyLevel: 2,
 			DueTime:         3,
 			ImageFlag:       false,
@@ -40,6 +42,7 @@ func TestBaseTask(t *testing.T) {
 		{
 			TaskID:          "task-003",
 			TaskName:        "夕飯を作る",
+			Description: "夕飯を作るタスク",
 			DifficultyLevel: 4,
 			DueTime:         3,
 			ImageFlag:       false,
@@ -48,6 +51,7 @@ func TestBaseTask(t *testing.T) {
 		{
 			TaskID:          "task-004",
 			TaskName:        "ゴミを出す",
+			Description: "ゴミを出すタスク",
 			DifficultyLevel: 1,
 			DueTime:         3,
 			ImageFlag:       false,
@@ -78,6 +82,13 @@ func TestBaseTask(t *testing.T) {
 		t.Fatalf(
 			"unexpected TaskName: %s",
 			result.TaskName,
+		)
+	}
+
+	if result.Description != "部屋を掃除するタスク" {
+		t.Fatalf(
+			"unexpected Description: %s",
+			result.Description,
 		)
 	}
 

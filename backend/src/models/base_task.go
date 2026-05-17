@@ -12,6 +12,7 @@ const (
 type BaseTask struct {
 	TaskID          string  `json:"TaskID" gorm:"primaryKey"` // タスクID
 	TaskName        string  `json:"TaskName"`                 // タスク名
+	Description     string  `json:"Description"`              // タスクの説明
 	DifficultyLevel int     `json:"DifficultyLevel"`          // 難易度
 	DueTime         int     `json:"DueTime"`                  // タスク期限
 	ImageFlag       bool    `json:"ImageFlag" gorm:"default:false"` // 写真フラグ
