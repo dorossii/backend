@@ -8,21 +8,20 @@ import (
 
 type AccessTokenClaim struct {
 	UserID   string   // ユーザーID
+	Name     string   // ユーザー名
+	Email    string   // メールアドレス
 	Labels   []string // ラベル
-	ProvCode string   // プロバイダーコード
-	ProvUid  string   // プロバイダーUID
+	ProvCode string   // プロバイダーコード
+	ProvUid  string   // プロバイダーUID
 }
 
 func ValidateToken(tokenString string) (AccessTokenClaim, error) {
 	logger.Println("トークンを検証します")
 
-	// トークンをパースする
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		// hmacSampleSecret is a []byte containing your secret, e.g. []byte("my_secret_key")
 		return pubKey, nil
 	}, jwt.WithValidMethods([]string{jwt.SigningMethodEdDSA.Alg()}))
 
-	// エラー処理
 	if err != nil {
 		return AccessTokenClaim{}, err
 	}
@@ -32,6 +31,8 @@ func ValidateToken(tokenString string) (AccessTokenClaim, error) {
 
 		return AccessTokenClaim{
 			UserID:   claims["userID"].(string),
+			Name:     claims["name"].(string),
+			Email:    claims["email"].(string),
 			Labels:   interfaceToString(labels),
 			ProvCode: claims["provCode"].(string),
 			ProvUid:  claims["provUid"].(string),
@@ -50,4 +51,4 @@ func interfaceToString(values []interface{}) []string {
 	}
 
 	return result
-} 
+}

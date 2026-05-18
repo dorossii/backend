@@ -1,3 +1,5 @@
+name: dorossii-backend
+
 services:
   nginx:
     hostname: nginx
@@ -33,7 +35,7 @@ services:
         condition: service_completed_successfully
 
   auth:
-    image: ghcr.io/mattuu0/authbase/auth:latest
+    image: ghcr.io/mattuu0/authbase/auth:v0.1.5
     env_file:
       - ./config/auth.env
       - ./openssl/jwtKeys/private.env
@@ -46,7 +48,7 @@ services:
         condition: service_completed_successfully
 
   migrate:
-    image: ghcr.io/mattuu0/authbase/auth:latest
+    image: ghcr.io/mattuu0/authbase/auth:v0.1.5
     env_file:
         - ./config/auth.env
     command: ["/auth","migrate","-r"]
