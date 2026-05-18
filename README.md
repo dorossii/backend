@@ -53,9 +53,19 @@
 - ``task setup`` : セットアップ
 - ``task clean`` : コンテナ落として全て削除
 - ``task down`` : コンテナ落とす
+- ``task test`` : 全テストを実行
+- ``task test:models`` : models のテストを実行
+- ``task test:repositories`` : repositories のテストを実行
+- ``task test:services`` : services のテストを実行
 
 ## テストを実行するとき
 
-- `docker compose exec app bash` でコンテナ内に入る
-- `cd models` で models ディレクトリへ移動
-- `go test -v` でテストを実行
+- `task test` で全テストを実行する
+- 特定の層のみ実行したい場合は以下のコマンドを使う
+
+| 対象 | コマンド |
+| --- | --- |
+| 全て | `task test` |
+| models | `task test:models` |
+| repositories | `task test:repositories` |
+| services | `task test:services` |
