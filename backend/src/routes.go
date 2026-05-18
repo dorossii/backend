@@ -2,6 +2,9 @@ package main
 
 // エンドポイントのルーティング
 import (
+	"backend/controllers"
+	"backend/middlewares"
+
 	"github.com/labstack/echo/v4"
 )
 
@@ -15,10 +18,10 @@ func TempController(c echo.Context) error {
 // ルーティング
 func InitRouter(router *echo.Echo) *echo.Echo {
 	// userグループ
-	user := router.Group("/user")
+	user := router.Group("/user", middlewares.RequireAuth)
 	{
 		// 初回ユーザー登録
-		user.POST("/register", TempController)
+		user.POST("/register", controllers.RegisterUser)
 
 		// ユーザー情報の編集
 		user.PUT("/setting", TempController)
