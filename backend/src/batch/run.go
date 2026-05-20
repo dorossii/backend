@@ -5,4 +5,7 @@ func Run() {
 	
 	//タスク作成
 	CreateTaskTicker()
+
+	//汚さ増加
+	DirtTicker()
 }
