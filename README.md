@@ -59,3 +59,9 @@
 - `docker compose exec app bash` でコンテナ内に入る
 - `cd models` で models ディレクトリへ移動
 - `go test -v` でテストを実行
+
+### バッチテストを実行する時
+- `docker compose exec app bash` でコンテナ内に入る
+- `cd batch` で batch ディレクトリへ移動
+- `go test -v` でテストを実行
+
