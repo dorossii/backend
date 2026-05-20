@@ -78,6 +78,26 @@ tasks:
       Build_Image:
         sh: docker build -q ./openssl
   
+  # 全テストを実行
+  test:
+    cmds:
+      - docker compose exec app sh -c "cd /app && go test -v -p 1 ./..."
+
+  # models のテストを実行
+  test:models:
+    cmds:
+      - docker compose exec app sh -c "cd /app/models && go test -v"
+
+  # repositories のテストを実行
+  test:repositories:
+    cmds:
+      - docker compose exec app sh -c "cd /app/repositories && go test -v"
+
+  # services のテストを実行
+  test:services:
+    cmds:
+      - docker compose exec app sh -c "cd /app/services && go test -v"
+
   config:
     cmds:
       - cmd: docker run --rm -it -v .\\config:/config/data {{.Build_Image}}

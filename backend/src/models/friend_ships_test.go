@@ -8,7 +8,6 @@ import (
 )
 
 func TestFriendShips(t *testing.T) {
-	models.Init()
 
 	// テーブル初期化
 	err := models.DB.
