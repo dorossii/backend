@@ -1,11 +1,8 @@
 package batch
 
-import (
-	
-)
-
+// バッチ処理のコントローラー
 func Run() {
-	// バッチ処理のコントローラー
 	
+	//タスク作成
+	CreateTaskTicker()
 }
-
