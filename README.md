@@ -56,6 +56,7 @@
 
 ## テストを実行するとき
 
+### モデルテストを実行するとき
 - `docker compose exec app bash` でコンテナ内に入る
 - `cd models` で models ディレクトリへ移動
 - `go test -v` でテストを実行
