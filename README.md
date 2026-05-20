@@ -69,3 +69,13 @@
 | models | `task test:models` |
 | repositories | `task test:repositories` |
 | services | `task test:services` |
+### モデルテストを実行するとき
+- `docker compose exec app bash` でコンテナ内に入る
+- `cd models` で models ディレクトリへ移動
+- `go test -v` でテストを実行
+
+### バッチテストを実行する時
+- `docker compose exec app bash` でコンテナ内に入る
+- `cd batch` で batch ディレクトリへ移動
+- `go test -v` でテストを実行
+
