@@ -1,6 +1,7 @@
 package main
 
 import (
+	"backend/batch"
 	"backend/middlewares"
 	"backend/models"
 	"net/http"
@@ -12,6 +13,9 @@ import (
 func main() {
 	// モデル初期化
 	models.Init()
+
+	// バッチ処理開始
+	batch.Run()
 	
 	router := echo.New()
 	router.Use(middleware.Logger())
