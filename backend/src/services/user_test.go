@@ -14,7 +14,7 @@ func TestRegisterUser(t *testing.T) {
 
 	req := services.RegisterUserRequest{
 		UserName:    "syatyo",
-		BirthDate:   "2000-01-01",
+		BirthDate:   946684800, // 2000-01-01 00:00:00 UTC
 		MailAddress: "syatyo@example.com",
 		LivingType:  "alone",
 	}
@@ -30,8 +30,8 @@ func TestRegisterUser(t *testing.T) {
 	if res.UserName != "syatyo" {
 		t.Fatalf("unexpected UserName: %s", res.UserName)
 	}
-	if res.BirthDate != "2000-01-01" {
-		t.Fatalf("unexpected BirthDate: %s", res.BirthDate)
+	if res.BirthDate != 946684800 {
+		t.Fatalf("unexpected BirthDate: %d", res.BirthDate)
 	}
 	if res.MailAddress != "syatyo@example.com" {
 		t.Fatalf("unexpected MailAddress: %s", res.MailAddress)
@@ -49,7 +49,7 @@ func TestRegisterUser_Together(t *testing.T) {
 
 	req := services.RegisterUserRequest{
 		UserName:    "goro",
-		BirthDate:   "1999-05-15",
+		BirthDate:   926726400, // 1999-05-15 00:00:00 UTC
 		MailAddress: "goro@example.com",
 		LivingType:  "together",
 	}
@@ -72,7 +72,7 @@ func TestRegisterUser_InvalidLivingType(t *testing.T) {
 
 	req := services.RegisterUserRequest{
 		UserName:    "syatyo",
-		BirthDate:   "2000-01-01",
+		BirthDate:   946684800,
 		MailAddress: "syatyo@example.com",
 		LivingType:  "invalid",
 	}
@@ -83,21 +83,3 @@ func TestRegisterUser_InvalidLivingType(t *testing.T) {
 	}
 }
 
-func TestRegisterUser_InvalidBirthDate(t *testing.T) {
-
-	if err := models.DB.Exec("TRUNCATE TABLE users").Error; err != nil {
-		t.Fatal(err)
-	}
-
-	req := services.RegisterUserRequest{
-		UserName:    "syatyo",
-		BirthDate:   "not-a-date",
-		MailAddress: "syatyo@example.com",
-		LivingType:  "alone",
-	}
-
-	_, err := services.RegisterUser("user-001", req)
-	if err == nil {
-		t.Fatal("expected error but got nil")
-	}
-}

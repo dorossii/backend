@@ -9,7 +9,7 @@ import (
 
 type RegisterUserRequest struct {
 	UserName    string `json:"userName"`
-	BirthDate   string `json:"birthDate"`
+	BirthDate   int64  `json:"birthDate"`
 	MailAddress string `json:"mailAddress"`
 	LivingType  string `json:"livingType"`
 }
@@ -17,7 +17,7 @@ type RegisterUserRequest struct {
 type RegisterUserResponse struct {
 	UserID      string `json:"userId"`
 	UserName    string `json:"userName"`
-	BirthDate   string `json:"birthDate"`
+	BirthDate   int64  `json:"birthDate"`
 	MailAddress string `json:"mailAddress"`
 	LivingType  string `json:"livingType"`
 }
@@ -27,10 +27,7 @@ func RegisterUser(userID string, req RegisterUserRequest) (*RegisterUserResponse
 		return nil, errors.New("livingType は alone か together のみ有効です")
 	}
 
-	birthDate, err := time.Parse("2006-01-02", req.BirthDate)
-	if err != nil {
-		return nil, errors.New("birthDate の形式が不正です (YYYY-MM-DD)")
-	}
+	birthDate := time.Unix(req.BirthDate, 0).UTC()
 
 	user := &models.User{
 		UserID:     userID,
@@ -46,7 +43,7 @@ func RegisterUser(userID string, req RegisterUserRequest) (*RegisterUserResponse
 	return &RegisterUserResponse{
 		UserID:      user.UserID,
 		UserName:    user.UserName,
-		BirthDate:   user.BirthDate.Format("2006-01-02"),
+		BirthDate:   user.BirthDate.Unix(),
 		MailAddress: user.Mailadress,
 		LivingType:  req.LivingType,
 	}, nil
