@@ -13,7 +13,7 @@ func CreateTaskTicker() {
 		//24時間ごとにタスクを作成する
 		ticker := time.NewTicker(24 * time.Hour)
 		defer ticker.Stop()
-		
+
 		for {
 			select {
 			case <-ticker.C:
@@ -25,6 +25,10 @@ func CreateTaskTicker() {
 }
 
 func CreateTask() error {
+
+	// 1ユーザーにつき何個タスクを作成するかの定数
+	const tasksPerUser = 2
+
 	// 全ユーザーにランダムでタスクを作成する
 	var userIDs []string
 	if err := models.DB.Model(&models.User{}).Pluck("user_id", &userIDs).Error; err != nil {
@@ -42,7 +46,7 @@ func CreateTask() error {
 	}
 
 	// ベースタスクが2つ未満だと「1ユーザーにつき2タスク」を満たせないためエラーハンドリング
-	if len(baseTasks) < 2 {
+	if len(baseTasks) < tasksPerUser {
 		return errors.New("insufficient base tasks available (minimum 2 required)")
 	}
 
@@ -58,7 +62,7 @@ func CreateTask() error {
 		shuffledIndices := r.Perm(len(baseTasks))
 
 		// 上位2つのランダムなタスクを選択
-		for i := 0; i < 2; i++ {
+		for i := 0; i < tasksPerUser; i++ {
 			baseTask := baseTasks[shuffledIndices[i]]
 
 			// DueTime（期限）の仕様に合わせて終了時間を計算 
