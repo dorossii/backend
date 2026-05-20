@@ -9,7 +9,6 @@ import (
 )
 
 func TestRemindNotice(t *testing.T) {
-	models.Init() // TODO: test毎に接続するのはキモい気がする。
 
 	// テーブル初期化
 	err := models.DB.
