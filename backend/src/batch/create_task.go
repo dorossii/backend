@@ -68,7 +68,8 @@ func CreateTask() error {
 			// DueTime（期限）の仕様に合わせて終了時間を計算 
 			endTime := now.Add(time.Duration(baseTask.DueTime) * 24 * time.Hour)
 
-			uuid, err := utils.Genid() // 重複を避けるためUUID等のユニークIDを生成
+			// UUIDを生成
+			uuid, err := utils.Genid() 
 			if err != nil {
 				return err
 			}
@@ -79,7 +80,7 @@ func CreateTask() error {
 			}
 
 			task := models.Task{
-				TaskID:       uuid, // 重複を避けるためUUID等のユニークIDを生成
+				TaskID:       uuid, 
 				UserID:       userID,
 				Status:       models.TaskStatusPending,
 				StartTime:    now,
