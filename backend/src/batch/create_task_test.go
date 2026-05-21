@@ -10,22 +10,6 @@ import (
 )
 
 func TestCreateTask(t *testing.T) {
-	models.Init()
-
-	//　関連する全テーブルの初期化
-	err := models.DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.Task{}).Error
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = models.DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.User{}).Error
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = models.DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.BaseTask{}).Error
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// テスト用データの準備 (ユーザー2人、ベースタスク3つ)
 	users := []models.User{
 		{
@@ -70,7 +54,7 @@ func TestCreateTask(t *testing.T) {
 	}
 
 	// テスト対象の関数を実行
-	err = batch.CreateTask()
+	err := batch.CreateTask()
 	if err != nil {
 		t.Fatalf("CreateTask failed: %v", err)
 	}

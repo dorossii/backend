@@ -5,19 +5,11 @@ import (
 	"backend/models"
 	"testing"
 	"time"
-	"gorm.io/gorm"
 )
 
 
 // AddDirt() 単体テスト
 func TestAddDirt(t *testing.T) {
-	models.Init()
-
-	// 関連するテーブルの初期化
-	err := models.DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.User{}).Error
-	if err != nil {
-		t.Fatal(err)
-	}
 
 		// テスト用データの準備 (ユーザー2人、ベースタスク3つ)
 	users := []models.User{
@@ -57,7 +49,7 @@ func TestAddDirt(t *testing.T) {
 	}
 
 	//テスト対象の関数を実行
-	err = batch.AddDirt()
+	err := batch.AddDirt()
 	if err != nil {
 		t.Fatalf("AddDirt() returned an error: %v", err)
 	}
