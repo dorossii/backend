@@ -8,4 +8,8 @@ func Run() {
 
 	//汚さ増加
 	DirtTicker()
+
+	//HP変化
+	ChangeHPTicker()
+
 }
