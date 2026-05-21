@@ -4,55 +4,10 @@ import (
 	"backend/batch"
 	"backend/models"
 	"testing"
-	"time"
-
 	"gorm.io/gorm"
 )
 
 func TestCreateTask(t *testing.T) {
-	models.Init()
-
-	//　関連する全テーブルの初期化
-	err := models.DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.Task{}).Error
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = models.DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.User{}).Error
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = models.DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.BaseTask{}).Error
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// テスト用データの準備 (ユーザー2人、ベースタスク3つ)
-	users := []models.User{
-		{
-			UserID:      "user-001",
-			UserName:    "syatyo",
-			BirthDate:   time.Date(2004, 1, 1, 0, 0, 0, 0, time.UTC),
-			Mailadress:  "user1@example.com",
-			HealthPoint: 100,
-			DirtLevel:   0,
-			Combo:       0,
-			BgColor:     "#ffb6c1",
-		},
-		{
-			UserID:      "user-002",
-			UserName:    "goro",
-			BirthDate:   time.Date(2004, 2, 2, 0, 0, 0, 0, time.UTC),
-			Mailadress:  "user2@example.com",
-			HealthPoint: 90,
-			DirtLevel:   10,
-			Combo:       1,
-			BgColor:     "#add8e6",
-		},
-	}
-	if err := models.DB.Create(&users).Error; err != nil {
-		t.Fatalf("failed to create dummy users: %v", err)
-	}
-
 	//　ベースタスクの準備(DueTimeは日数単位)
 	baseTasks := []models.BaseTask{
 		{TaskID: "base-001", TaskName: "部屋掃除", DueTime: 1, ImageFlag: true},
@@ -70,7 +25,7 @@ func TestCreateTask(t *testing.T) {
 	}
 
 	// テスト対象の関数を実行
-	err = batch.CreateTask()
+	err := batch.CreateTask()
 	if err != nil {
 		t.Fatalf("CreateTask failed: %v", err)
 	}
@@ -82,7 +37,7 @@ func TestCreateTask(t *testing.T) {
 	}
 
 	// 検証①: 生成された総タスク数の確認 (ユーザー2人 × 2タスク = 4つ)
-	expectedTotalTasks := 4
+	expectedTotalTasks := 6
 	if len(createdTasks) != expectedTotalTasks {
 		t.Fatalf("unexpected total tasks: got %d, want %d", len(createdTasks), expectedTotalTasks)
 	}
@@ -91,6 +46,12 @@ func TestCreateTask(t *testing.T) {
 	tasksByUser := make(map[string][]models.Task)
 	for _, task := range createdTasks {
 		tasksByUser[task.UserID] = append(tasksByUser[task.UserID], task)
+	}
+
+		// 結果の検証 (SELECT)
+	var users []models.User
+	if err := models.DB.Find(&users).Error; err != nil {
+		t.Fatal(err)
 	}
 
 	for _, user := range users {
@@ -132,25 +93,9 @@ func TestCreateTask(t *testing.T) {
 
 // ベースタスクが2つ未満の状態で CreateTask を実行したときにエラーになるかのテスト
 func TestCreateTask_InsufficientBaseTasks(t *testing.T) {
-	models.Init()
 
 	models.DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.Task{})
-	models.DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.User{})
 	models.DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.BaseTask{})
-
-	user := models.User{
-		UserID:      "user-001",
-		UserName:    "syatyo",
-		BirthDate:   time.Date(2004, 1, 1, 0, 0, 0, 0, time.UTC),
-		Mailadress:  "user1@example.com",
-		HealthPoint: 100,
-		DirtLevel:   0,
-		Combo:       0,
-		BgColor:     "#ffb6c1",
-	}
-	if err := models.DB.Create(&user).Error; err != nil {
-		t.Fatalf("failed to create dummy user: %v", err)
-	}
 
 	baseTask := models.BaseTask{TaskID: "base-001", TaskName: "部屋掃除"}
 	if err := models.DB.Create(&baseTask).Error; err != nil {
