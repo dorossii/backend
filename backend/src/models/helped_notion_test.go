@@ -3,21 +3,9 @@ package models_test
 import (
 	"backend/models"
 	"testing"
-
-	"gorm.io/gorm"
 )
 
 func TestHelpedNotice(t *testing.T) {
-
-	// テーブル初期化
-	err := models.DB.
-		Session(&gorm.Session{AllowGlobalUpdate: true}).
-		Delete(&models.HelpedNotice{}).Error
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// INSERT
 	notice := models.HelpedNotice{
 		NoticeID: "notice-001",
@@ -26,7 +14,7 @@ func TestHelpedNotice(t *testing.T) {
 		IsRead:   false,
 	}
 
-	err = models.DB.Create(&notice).Error
+	err := models.DB.Create(&notice).Error
 	if err != nil {
 		t.Fatal(err)
 	}

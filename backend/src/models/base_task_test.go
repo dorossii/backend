@@ -3,21 +3,9 @@ package models_test
 import (
 	"backend/models"
 	"testing"
-
-	"gorm.io/gorm"
 )
 
 func TestBaseTask(t *testing.T) {
-
-	// テーブル初期化
-	err := models.DB.
-		Session(&gorm.Session{AllowGlobalUpdate: true}).
-		Delete(&models.BaseTask{}).Error
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// INSERT
 	tasks := []models.BaseTask{
 		{
@@ -58,7 +46,7 @@ func TestBaseTask(t *testing.T) {
 		},
 	}
 
-	err = models.DB.Create(&tasks).Error
+	err := models.DB.Create(&tasks).Error
 	if err != nil {
 		t.Fatal(err)
 	}

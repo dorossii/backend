@@ -3,21 +3,9 @@ package models_test
 import (
 	"backend/models"
 	"testing"
-
-	"gorm.io/gorm"
 )
 
 func TestTrashNotice(t *testing.T) {
-
-	// テーブル初期化
-	err := models.DB.
-		Session(&gorm.Session{AllowGlobalUpdate: true}).
-		Delete(&models.TrashNotice{}).Error
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// INSERT
 	notice := models.TrashNotice{
 		NoticeID:   "notice-005",
@@ -26,7 +14,7 @@ func TestTrashNotice(t *testing.T) {
 		Count:      1,
 	}
 
-	err = models.DB.Create(&notice).Error
+	err := models.DB.Create(&notice).Error
 	if err != nil {
 		t.Fatal(err)
 	}

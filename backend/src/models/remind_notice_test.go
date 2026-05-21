@@ -4,21 +4,9 @@ import (
 	"backend/models"
 	"testing"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 func TestRemindNotice(t *testing.T) {
-
-	// テーブル初期化
-	err := models.DB.
-		Session(&gorm.Session{AllowGlobalUpdate: true}).
-		Delete(&models.RemindNotice{}).Error
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// INSERT
 	notices := []models.RemindNotice{
 		{
@@ -39,7 +27,7 @@ func TestRemindNotice(t *testing.T) {
 		},
 	}
 
-	err = models.DB.Create(&notices).Error
+	err := models.DB.Create(&notices).Error
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -3,21 +3,9 @@ package models_test
 import (
 	"backend/models"
 	"testing"
-
-	"gorm.io/gorm"
 )
 
 func TestFriendShips(t *testing.T) {
-
-	// テーブル初期化
-	err := models.DB.
-		Session(&gorm.Session{AllowGlobalUpdate: true}).
-		Delete(&models.FriendShips{}).Error
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	friendships := []models.FriendShips{
 		{
 			UserID:   "user-001",
@@ -61,7 +49,7 @@ func TestFriendShips(t *testing.T) {
 		},
 	}
 
-	err = models.DB.Create(&friendships).Error
+	err := models.DB.Create(&friendships).Error
 	if err != nil {
 		t.Fatal(err)
 	}
