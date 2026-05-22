@@ -17,11 +17,24 @@ type TaskResponse struct {
     ImageID     string    `json:"imageId"`
 }
 
-func GetTasks(userID string) ([]models.Task, error) {
-	//taskとbaseを結合して、ユーザーIDに紐づくタスクを取得する
-	var tasks []models.Task
-	if err := models.DB.Preload("Base").Where("user_id = ?", userID).Find(&tasks).Error; err != nil {
-		return nil, err
-	}
-	return tasks, nil
+func GetUserTasks(userID string) ([]TaskResponse, error) {
+    var results []TaskResponse
+
+    err := models.DB.Model(&models.Task{}).
+        Select(`
+            tasks.task_id,  
+            tasks.user_id, 
+            base_tasks.task_name, 
+            tasks.status, 
+            base_tasks.tags, 
+            base_tasks.description, 
+            tasks.start_time as start_date, 
+            tasks.end_time, 
+            tasks.image_id
+        `).
+        Joins("JOIN base_tasks ON tasks.task_id = base_tasks.task_id").
+        Where("tasks.user_id = ?", userID).
+        Scan(&results).Error
+
+    return results, err
 }
