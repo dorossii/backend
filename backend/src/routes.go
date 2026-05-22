@@ -67,6 +67,9 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		// フレンド招待
 		friend.GET("/invite", controllers.GetInviteURL)
 
+		// フレンド申請送信
+		friend.POST("/send", controllers.SendFriendRequest)
+
 		// フレンド認証
 		friend.POST("/accept", TempController)
 
