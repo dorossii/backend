@@ -15,6 +15,14 @@ func GetFriendShip(userID, friendID string) (*models.FriendShips, error) {
 	return &fs, err
 }
 
+// GetFriendShipAny は userID と friendID の双方向いずれかのレコードを返す
+func GetFriendShipAny(userID, friendID string) (*models.FriendShips, error) {
+	if fs, err := GetFriendShip(userID, friendID); err != nil || fs != nil {
+		return fs, err
+	}
+	return GetFriendShip(friendID, userID)
+}
+
 func CreateFriendShip(fs *models.FriendShips) error {
 	return models.DB.Create(fs).Error
 }
