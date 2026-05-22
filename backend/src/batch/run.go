@@ -12,4 +12,6 @@ func Run() {
 	//HP変化
 	ChangeHPTicker()
 
+	//タスク削除
+	DeleteTaskTicker()
 }
