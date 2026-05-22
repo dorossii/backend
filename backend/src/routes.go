@@ -59,13 +59,13 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 	}
 
 	// friendグループ
-	friend := router.Group("/friend")
+	friend := router.Group("/friend", middlewares.RequireAuth)
 	{
 		// フレンド一覧取得
 		friend.GET("", TempController)
 
 		// フレンド招待
-		friend.GET("/invite", TempController)
+		friend.GET("/invite", controllers.GetInviteURL)
 
 		// フレンド認証
 		friend.POST("/accept", TempController)
