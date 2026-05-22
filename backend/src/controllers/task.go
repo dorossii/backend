@@ -6,7 +6,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-const errormsg = "タスクの取得に失敗しました"
+const ErrTaskFetch = "タスクの取得に失敗しました"
 
 // タスク取得のコントローラー
 func GetTask(ctx echo.Context) error {
@@ -17,7 +17,7 @@ func GetTask(ctx echo.Context) error {
 	tasks, err := services.GetTasks(userId)
 	if err != nil {
 		return ctx.JSON(500, map[string]string{
-			"message": errormsg,
+			"message": ErrTaskFetch,
 		})
 	}
 
