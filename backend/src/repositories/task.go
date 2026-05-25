@@ -32,7 +32,7 @@ func GetUserTasks(userID string) ([]TaskResponse, error) {
             tasks.end_time, 
             tasks.image_id
         `).
-        Joins("JOIN base_tasks ON tasks.task_id = base_tasks.task_id").
+        Joins("JOIN base_tasks ON tasks.base_id = base_tasks.base_id").
         Where("tasks.user_id = ?", userID).
         Scan(&results).Error
 

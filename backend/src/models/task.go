@@ -12,6 +12,7 @@ const (
 
 type Task struct {
 	TaskID       string    `json:"TaskID" gorm:"primaryKey"`     // タスクのID
+	BaseID       string    `json:"BaseID"`                        // 元となる BaseTask の ID
 	UserID       string    `json:"UserID"`                        // タスクを持つユーザのID
 	Status       TaskStatus `json:"Status"`                      	// タスクの状況
 	StartTime    time.Time `json:"StartTime"`                     // タスクが付与された時間

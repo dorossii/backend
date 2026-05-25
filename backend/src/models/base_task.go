@@ -10,7 +10,7 @@ const (
 )
 
 type BaseTask struct {
-	TaskID          string  `json:"TaskID" gorm:"primaryKey"` // タスクID
+	BaseID          string  `json:"BaseID" gorm:"primaryKey"` // タスクID
 	TaskName        string  `json:"TaskName"`                 // タスク名
 	Description     string  `json:"Description"`              // タスクの説明
 	DifficultyLevel int     `json:"DifficultyLevel"`          // 難易度
