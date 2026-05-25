@@ -62,3 +62,50 @@ func TestSendFriendRequest_AlreadyReceived(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+// user-002 -> user-001 の申請を user-001 が承認する正常系
+func TestAcceptFriendRequest(t *testing.T) {
+	truncateFriendShips(t)
+
+	if err := services.SendFriendRequest("user-002", "user-001"); err != nil {
+		t.Fatalf("SendFriendRequest failed: %v", err)
+	}
+
+	if err := services.AcceptFriendRequest("user-001", "user-002"); err != nil {
+		t.Fatalf("AcceptFriendRequest failed: %v", err)
+	}
+
+	var fs models.FriendShips
+	if err := models.DB.First(&fs, "user_id = ? AND friend_id = ?", "user-002", "user-001").Error; err != nil {
+		t.Fatalf("record not found: %v", err)
+	}
+	if fs.Status != models.FriendStatusAccepted {
+		t.Fatalf("unexpected status: %d", fs.Status)
+	}
+}
+
+// リクエストが存在しない場合はエラー
+func TestAcceptFriendRequest_NotFound(t *testing.T) {
+	truncateFriendShips(t)
+
+	err := services.AcceptFriendRequest("user-001", "user-002")
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+}
+
+// 自分が申請者側の場合は承認不可
+func TestAcceptFriendRequest_CannotAcceptOwnRequest(t *testing.T) {
+	truncateFriendShips(t)
+
+	// user-001 -> user-002 の申請
+	if err := services.SendFriendRequest("user-001", "user-002"); err != nil {
+		t.Fatalf("SendFriendRequest failed: %v", err)
+	}
+
+	// 申請者 user-001 が自分の申請を承認しようとする（不正）
+	err := services.AcceptFriendRequest("user-001", "user-002")
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+}

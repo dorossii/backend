@@ -26,3 +26,20 @@ func SendFriendRequest(ctx echo.Context) error {
 
 	return ctx.JSON(http.StatusOK, map[string]string{"message": "success"})
 }
+
+func AcceptFriendRequest(ctx echo.Context) error {
+	userID := ctx.Get("UserID").(string)
+
+	// 相手のIDを取得
+	friendID := ctx.Request().Header.Get("FriendId")
+	if friendID == "" {
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "FriendId header is required"})
+	}
+
+	err := services.AcceptFriendRequest(userID, friendID)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]string{"message": "success"})
+}

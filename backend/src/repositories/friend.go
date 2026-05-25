@@ -26,3 +26,7 @@ func GetFriendShipAny(userID, friendID string) (*models.FriendShips, error) {
 func CreateFriendShip(fs *models.FriendShips) error {
 	return models.DB.Create(fs).Error
 }
+
+func UpdateFriendShip(fs *models.FriendShips) error {
+	return models.DB.Save(fs).Error
+}
