@@ -1,4 +1,4 @@
-package repositories_test
+package services_test
 
 import (
 	"backend/models"

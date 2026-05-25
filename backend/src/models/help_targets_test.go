@@ -3,29 +3,16 @@ package models_test
 import (
 	"backend/models"
 	"testing"
-
-	"gorm.io/gorm"
 )
 
 func TestHelpTargets(t *testing.T) {
-	models.Init() // TODO: test毎に接続するのはキモい気がする。
-
-	// テーブル初期化
-	err := models.DB.
-		Session(&gorm.Session{AllowGlobalUpdate: true}).
-		Delete(&models.HelpTargets{}).Error
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// INSERT
 	target := models.HelpTargets{
 		UserID:   "user-001",
 		FriendID: "user-003",
 	}
 
-	err = models.DB.Create(&target).Error
+	err := models.DB.Create(&target).Error
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -4,8 +4,6 @@ import (
 	"backend/models"
 	"testing"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 func TestRemindNotice(t *testing.T) {
@@ -40,7 +38,7 @@ func TestRemindNotice(t *testing.T) {
 		},
 	}
 
-	err = models.DB.Create(&notices).Error
+	err := models.DB.Create(&notices).Error
 	if err != nil {
 		t.Fatal(err)
 	}

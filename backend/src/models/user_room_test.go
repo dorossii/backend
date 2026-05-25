@@ -3,21 +3,9 @@ package models_test
 import (
 	"backend/models"
 	"testing"
-
-	"gorm.io/gorm"
 )
 
 func TestUserRoom(t *testing.T) {
-	models.Init() // TODO: test毎に接続するのはキモい気がする。
-
-	// テーブル初期化
-	err := models.DB.
-		Session(&gorm.Session{AllowGlobalUpdate: true}).
-		Delete(&models.UserRoom{}).Error
-
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	// INSERT
 	rooms := []models.UserRoom{
@@ -37,7 +25,7 @@ func TestUserRoom(t *testing.T) {
 		},
 	}
 
-	err = models.DB.Create(&rooms).Error
+	err := models.DB.Create(&rooms).Error
 	if err != nil {
 		t.Fatal(err)
 	}

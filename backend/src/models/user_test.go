@@ -4,22 +4,10 @@ import (
 	"backend/models"
 	"testing"
 	"time"
-
-	"gorm.io/gorm"
 )
 
 
 func TestUser(t *testing.T) {
-	models.Init() // TODO: test毎に接続するのはキモい気がする。
-
-	// テーブル初期化
-	err := models.DB.
-		Session(&gorm.Session{AllowGlobalUpdate: true}).
-		Delete(&models.User{}).Error
-
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	// INSERT
 	users := []models.User{
@@ -76,7 +64,7 @@ func TestUser(t *testing.T) {
 
 	}
 
-	err = models.DB.Create(&users).Error
+	err := models.DB.Create(&users).Error
 	if err != nil {
 		t.Fatal(err)
 	}
