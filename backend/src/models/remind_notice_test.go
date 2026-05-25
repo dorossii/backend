@@ -7,6 +7,7 @@ import (
 )
 
 func TestRemindNotice(t *testing.T) {
+<<<<<<< HEAD
 	models.Init()
 
 	// テーブル初期化
@@ -18,6 +19,8 @@ func TestRemindNotice(t *testing.T) {
 		t.Fatal(err)
 	}
 
+=======
+>>>>>>> develop
 	// INSERT
 	notices := []models.RemindNotice{
 		{
@@ -99,6 +102,7 @@ func TestRemindNotice(t *testing.T) {
 		)
 	}
 
+<<<<<<< HEAD
 	if results[1].Title != "【フレンド】user2があなたを応援しています" {
 		t.Fatalf(
 			"unexpected Title: %s",
@@ -106,3 +110,6 @@ func TestRemindNotice(t *testing.T) {
 		)
 	}
 }
+=======
+}
+>>>>>>> develop
