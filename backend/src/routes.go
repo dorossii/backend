@@ -36,7 +36,7 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		task := user.Group("/task")
 		{
 			// タスク取得
-			task.GET("", TempController)
+			task.GET("", controllers.GetTask)
 
 			// タスク詳細取得
 			task.GET("/:id", TempController)

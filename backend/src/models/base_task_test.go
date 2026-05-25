@@ -9,7 +9,7 @@ func TestBaseTask(t *testing.T) {
 	// INSERT
 	tasks := []models.BaseTask{
 		{
-			TaskID:          "task-001",
+			BaseID:          "task-001",
 			TaskName:        "部屋掃除",
 			Description: "部屋を掃除するタスク",
 			DifficultyLevel: 3,
@@ -18,7 +18,7 @@ func TestBaseTask(t *testing.T) {
 			Tags:            models.TaskTagCleaning,
 		},
 		{
-			TaskID:          "task-002",
+			BaseID:          "task-002",
 			TaskName:        "洗濯物を干す",
 			Description: "洗濯物を干すタスク",
 			DifficultyLevel: 2,
@@ -27,7 +27,7 @@ func TestBaseTask(t *testing.T) {
 			Tags:            models.TaskTagLaundry,
 		},
 		{
-			TaskID:          "task-003",
+			BaseID:          "task-003",
 			TaskName:        "夕飯を作る",
 			Description: "夕飯を作るタスク",
 			DifficultyLevel: 4,
@@ -36,7 +36,7 @@ func TestBaseTask(t *testing.T) {
 			Tags:            models.TaskTagCooking,
 		},
 		{
-			TaskID:          "task-004",
+			BaseID:          "task-004",
 			TaskName:        "ゴミを出す",
 			Description: "ゴミを出すタスク",
 			DifficultyLevel: 1,
@@ -56,7 +56,7 @@ func TestBaseTask(t *testing.T) {
 
 	err = models.DB.First(
 		&result,
-		"task_id = ?",
+		"base_id = ?",
 		"task-001",
 	).Error
 

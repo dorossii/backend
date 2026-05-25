@@ -19,7 +19,7 @@ func TestMain(m *testing.M) {
 }
 
 func createTestUser() error {
-		// テスト用データの準備 (ユーザー2人)
+	// テスト用データの準備 (ユーザー2人)
 	users := []models.User{
 		{
 			UserID:      "user-001",
