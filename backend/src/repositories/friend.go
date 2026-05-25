@@ -30,3 +30,15 @@ func CreateFriendShip(fs *models.FriendShips) error {
 func UpdateFriendShip(fs *models.FriendShips) error {
 	return models.DB.Save(fs).Error
 }
+
+func GetFriendShipsByStatus(userID string, status models.FriendStatus) ([]*models.FriendShips, error) {
+	var fs []*models.FriendShips
+	err := models.DB.Where("user_id = ? AND status = ?", userID, status).Find(&fs).Error
+	return fs, err
+}
+
+func GetIncomingFriendShipsByStatus(userID string, status models.FriendStatus) ([]*models.FriendShips, error) {
+	var fs []*models.FriendShips
+	err := models.DB.Where("friend_id = ? AND status = ?", userID, status).Find(&fs).Error
+	return fs, err
+}

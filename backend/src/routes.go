@@ -73,6 +73,9 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		// フレンド認証
 		friend.POST("/accept", controllers.AcceptFriendRequest)
 
+		// フレンドリクエスト一覧を取得
+		friend.GET("/received", controllers.GetReceivedFriendRequests)
+
 		// フレンド削除
 		friend.DELETE("/:id", TempController)
 

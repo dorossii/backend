@@ -109,3 +109,83 @@ func TestAcceptFriendRequest_CannotAcceptOwnRequest(t *testing.T) {
 		t.Fatal("expected error but got nil")
 	}
 }
+
+// 自分宛の pending リクエスト一覧が取得できる
+func TestGetFriendRequests(t *testing.T) {
+	truncateFriendShips(t)
+
+	// user-002, user-003 から user-001 へ申請
+	if err := services.SendFriendRequest("user-002", "user-001"); err != nil {
+		t.Fatalf("SendFriendRequest failed: %v", err)
+	}
+	if err := services.SendFriendRequest("user-003", "user-001"); err != nil {
+		t.Fatalf("SendFriendRequest failed: %v", err)
+	}
+
+	reqs, err := services.GetFriendRequests("user-001")
+	if err != nil {
+		t.Fatalf("GetFriendRequests failed: %v", err)
+	}
+	if len(reqs) != 2 {
+		t.Fatalf("expected 2 requests, got %d", len(reqs))
+	}
+
+	requesters := map[string]bool{}
+	for _, r := range reqs {
+		requesters[r.RequestUser] = true
+	}
+	if !requesters["user-002"] || !requesters["user-003"] {
+		t.Fatalf("unexpected requesters: %v", requesters)
+	}
+}
+
+// 自分が送った申請は一覧に含まれない
+func TestGetFriendRequests_ExcludesSentRequests(t *testing.T) {
+	truncateFriendShips(t)
+
+	// user-001 から user-002 へ申請（自分が送った側）
+	if err := services.SendFriendRequest("user-001", "user-002"); err != nil {
+		t.Fatalf("SendFriendRequest failed: %v", err)
+	}
+
+	reqs, err := services.GetFriendRequests("user-001")
+	if err != nil {
+		t.Fatalf("GetFriendRequests failed: %v", err)
+	}
+	if len(reqs) != 0 {
+		t.Fatalf("expected 0 requests, got %d", len(reqs))
+	}
+}
+
+// 承認済みのリクエストは一覧に含まれない
+func TestGetFriendRequests_ExcludesAccepted(t *testing.T) {
+	truncateFriendShips(t)
+
+	if err := services.SendFriendRequest("user-002", "user-001"); err != nil {
+		t.Fatalf("SendFriendRequest failed: %v", err)
+	}
+	if err := services.AcceptFriendRequest("user-001", "user-002"); err != nil {
+		t.Fatalf("AcceptFriendRequest failed: %v", err)
+	}
+
+	reqs, err := services.GetFriendRequests("user-001")
+	if err != nil {
+		t.Fatalf("GetFriendRequests failed: %v", err)
+	}
+	if len(reqs) != 0 {
+		t.Fatalf("expected 0 requests after accept, got %d", len(reqs))
+	}
+}
+
+// リクエストが0件の場合は空スライスを返す
+func TestGetFriendRequests_Empty(t *testing.T) {
+	truncateFriendShips(t)
+
+	reqs, err := services.GetFriendRequests("user-001")
+	if err != nil {
+		t.Fatalf("GetFriendRequests failed: %v", err)
+	}
+	if len(reqs) != 0 {
+		t.Fatalf("expected 0 requests, got %d", len(reqs))
+	}
+}

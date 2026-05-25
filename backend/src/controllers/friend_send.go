@@ -43,3 +43,16 @@ func AcceptFriendRequest(ctx echo.Context) error {
 
 	return ctx.JSON(http.StatusOK, map[string]string{"message": "success"})
 }
+
+// 送られてきたフレンドリクエストを取得する関数
+func GetReceivedFriendRequests(ctx echo.Context) error {
+	userID := ctx.Get("UserID").(string)
+
+	// 相手のIDを取得
+	res, err := services.GetFriendRequests(userID)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return ctx.JSON(http.StatusOK, res)
+}
