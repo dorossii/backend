@@ -2,6 +2,8 @@ package main
 
 // エンドポイントのルーティング
 import (
+	"backend/controllers"
+
 	"github.com/labstack/echo/v4"
 )
 
@@ -42,7 +44,7 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 			task.POST("/:id/image", TempController)
 
 			// タスク煽りメッセージ
-			task.POST("/:id/message", TempController)
+			task.POST("/message", controllers.PostTauntMessageHandler)
 
 			// 写真確認
 			task.GET("/:id/image", TempController)
