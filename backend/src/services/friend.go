@@ -67,11 +67,13 @@ type FriendInfo struct {
 
 // GetFriends は承認済みフレンドの情報一覧を返す
 func GetFriends(userID string) ([]FriendInfo, error) {
+	// 承認済みフレンドの User レコードを取得
 	users, err := repositories.GetFriends(userID)
 	if err != nil {
 		return nil, err
 	}
 
+	// User レコードをレスポンス用の FriendInfo に変換
 	friends := make([]FriendInfo, 0, len(users))
 	for _, u := range users {
 		friends = append(friends, FriendInfo{
