@@ -56,6 +56,36 @@ type FriendRequest struct {
 	CreatedAt   int64  `json:"CreatedAt"`
 }
 
+type FriendInfo struct {
+	UserID     string `json:"user_id"`
+	Name       string `json:"name"`
+	HP         int    `json:"hp"`
+	DirtLevel  int    `json:"dirtLevel"`
+	Icon       string `json:"icon"`
+	Background string `json:"background"`
+}
+
+// GetFriends は承認済みフレンドの情報一覧を返す
+func GetFriends(userID string) ([]FriendInfo, error) {
+	users, err := repositories.GetFriends(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	friends := make([]FriendInfo, 0, len(users))
+	for _, u := range users {
+		friends = append(friends, FriendInfo{
+			UserID:     u.UserID,
+			Name:       u.UserName,
+			HP:         u.HealthPoint,
+			DirtLevel:  u.DirtLevel,
+			Icon:       u.Icon,
+			Background: u.BgColor,
+		})
+	}
+	return friends, nil
+}
+
 // フレンド申請一覧取得
 func GetFriendRequests(userID string) ([]FriendRequest, error) {
 	// 相手からのフレンドリクエスト

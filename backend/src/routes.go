@@ -62,7 +62,7 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 	friend := router.Group("/friend", middlewares.RequireAuth)
 	{
 		// フレンド一覧取得
-		friend.GET("", TempController)
+		friend.GET("", controllers.GetFriends)
 
 		// フレンド招待
 		friend.GET("/invite", controllers.GetInviteURL)

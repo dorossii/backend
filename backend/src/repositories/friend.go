@@ -42,3 +42,14 @@ func GetIncomingFriendShipsByStatus(userID string, status models.FriendStatus) (
 	err := models.DB.Where("friend_id = ? AND status = ?", userID, status).Find(&fs).Error
 	return fs, err
 }
+
+// GetFriends は userID の承認済みフレンドの User 情報一覧を返す
+func GetFriends(userID string) ([]*models.User, error) {
+	var users []*models.User
+	err := models.DB.
+		Joins("JOIN friend_ships ON (friend_ships.friend_id = users.user_id OR friend_ships.user_id = users.user_id)").
+		Where("(friend_ships.user_id = ? OR friend_ships.friend_id = ?) AND friend_ships.status = ? AND users.user_id != ?",
+			userID, userID, models.FriendStatusAccepted, userID).
+		Find(&users).Error
+	return users, err
+}

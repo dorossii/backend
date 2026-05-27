@@ -59,6 +59,17 @@ func GetReceivedFriendRequests(ctx echo.Context) error {
 }
 
 
+func GetFriends(ctx echo.Context) error {
+	userID := ctx.Get("UserID").(string)
+
+	friends, err := services.GetFriends(userID)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]interface{}{"friends": friends})
+}
+
 func GetInviteURL(ctx echo.Context) error {
 	userID := ctx.Get("UserID").(string)
 
