@@ -1,4 +1,4 @@
-@base_url = ""
+@base_url = https://localhost:8947/app
 @task_id = ""
 @friend_id = ""
 
@@ -118,9 +118,10 @@ DELETE {{base_url}}/friend/{{friend_id}} HTTP/1.1
 ### 嫌がらせする人の設定
 PUT {{base_url}}/friend/attack HTTP/1.1
 Content-Type: application/json
+UserID: user-001
 
 {
-	"TargetUser":"uuid"
+	"target_user":"user-003"
 }
 
 

@@ -59,7 +59,7 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 	}
 
 	// friendグループ
-	friend := router.Group("/friend", middlewares.RequireAuth)
+	friend := router.Group("/friend")
 	{
 		// フレンド一覧取得
 		friend.GET("", TempController)
@@ -77,7 +77,7 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		friend.DELETE("/:id", TempController)
 
 		// 嫌がらせする人の設定
-		friend.PUT("/attack", TempController)
+		friend.PUT("/attack", controllers.PostAttackerSettingsHandler)
 
 		// レスキューする人の設定
 		friend.POST("/rescue", TempController)
