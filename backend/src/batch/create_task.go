@@ -80,7 +80,8 @@ func CreateTask() error {
 			}
 
 			task := models.Task{
-				TaskID:       uuid, 
+				TaskID:       uuid,
+				BaseID:       baseTask.BaseID, 
 				UserID:       userID,
 				Status:       models.TaskStatusPending,
 				StartTime:    now,

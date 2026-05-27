@@ -10,9 +10,9 @@ import (
 func TestCreateTask(t *testing.T) {
 	//　ベースタスクの準備(DueTimeは日数単位)
 	baseTasks := []models.BaseTask{
-		{TaskID: "base-001", TaskName: "部屋掃除", DueTime: 1, ImageFlag: true},
-		{TaskID: "base-002", TaskName: "洗濯物を干す", DueTime: 2, ImageFlag: false},
-		{TaskID: "base-003", TaskName: "夕飯を作る", DueTime: 3, ImageFlag: false},
+		{BaseID: "base-001", TaskName: "部屋掃除", DueTime: 1, ImageFlag: true},
+		{BaseID: "base-002", TaskName: "洗濯物を干す", DueTime: 2, ImageFlag: false},
+		{BaseID: "base-003", TaskName: "夕飯を作る", DueTime: 3, ImageFlag: false},
 	}
 	if err := models.DB.Create(&baseTasks).Error; err != nil {
 		t.Fatalf("failed to create dummy base tasks: %v", err)
@@ -48,7 +48,7 @@ func TestCreateTask(t *testing.T) {
 		tasksByUser[task.UserID] = append(tasksByUser[task.UserID], task)
 	}
 
-		// 結果の検証 (SELECT)
+	// 結果の検証 (SELECT)
 	var users []models.User
 	if err := models.DB.Find(&users).Error; err != nil {
 		t.Fatal(err)
@@ -81,7 +81,7 @@ func TestCreateTask(t *testing.T) {
 			}
 
 			t.Logf("[生成確認] User: %s のタスク (ID: %s) は BaseTask: %s (%s) から正しく生成されました。(設定期間: %d日間)画像要求: %v",
-				task.UserID, task.TaskID, matchedBaseTask.TaskID, matchedBaseTask.TaskName, calculatedDueDay, task.RequireImage)
+				task.UserID, task.TaskID, matchedBaseTask.BaseID, matchedBaseTask.TaskName, calculatedDueDay, task.RequireImage)
 		}
 
 		// 同じユーザー内で重複タスク（EndTimeが同時刻）が割り当たっていないか
@@ -97,7 +97,7 @@ func TestCreateTask_InsufficientBaseTasks(t *testing.T) {
 	models.DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.Task{})
 	models.DB.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.BaseTask{})
 
-	baseTask := models.BaseTask{TaskID: "base-001", TaskName: "部屋掃除"}
+	baseTask := models.BaseTask{BaseID: "base-001", TaskName: "部屋掃除"}
 	if err := models.DB.Create(&baseTask).Error; err != nil {
 		t.Fatalf("failed to create dummy base task: %v", err)
 	}

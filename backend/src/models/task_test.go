@@ -11,6 +11,7 @@ func TestTask(t *testing.T) {
 	tasks := []models.Task{
 		{
 			TaskID:    "task-001",
+			BaseID:    "base-001",
 			UserID:    "user-001",
 			Status:    models.TaskStatusImcomplete,
 			StartTime: time.Now(),
@@ -18,6 +19,7 @@ func TestTask(t *testing.T) {
 		},
 		{
 			TaskID:    "task-002",
+			BaseID:    "base-002",
 			UserID:    "user-001",
 			Status:    models.TaskStatusPending,
 			StartTime: time.Now(),
@@ -25,6 +27,7 @@ func TestTask(t *testing.T) {
 		},
 		{
 			TaskID:    "task-003",
+			BaseID:    "base-003",
 			UserID:    "user-001",
 			Status:    models.TaskStatusCompleted,
 			StartTime: time.Now(),
@@ -42,8 +45,8 @@ func TestTask(t *testing.T) {
 
 	err = models.DB.First(
 		&result,
-		"task_id = ?",
-		"task-001",
+		"base_id = ?",
+		"base-001",
 	).Error
 
 	if err != nil {

@@ -36,7 +36,7 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		task := user.Group("/task")
 		{
 			// タスク取得
-			task.GET("", TempController)
+			task.GET("", controllers.GetTask)
 
 			// タスク詳細取得
 			task.GET("/:id", TempController)
@@ -71,7 +71,10 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		friend.POST("/send", controllers.SendFriendRequest)
 
 		// フレンド認証
-		friend.POST("/accept", TempController)
+		friend.POST("/accept", controllers.AcceptFriendRequest)
+
+		// フレンドリクエスト一覧を取得
+		friend.GET("/received", controllers.GetReceivedFriendRequests)
 
 		// フレンド削除
 		friend.DELETE("/:id", TempController)
