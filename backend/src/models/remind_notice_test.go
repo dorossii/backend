@@ -12,7 +12,7 @@ func TestRemindNotice(t *testing.T) {
 		{
 			NoticeID:   "notice-002",
 			UserID:     "user-001",
-			SenderType: models.SenderTypeOfficial,
+			SenderID:   "",
 			Title:      "【公式】今日のタスクを確認してください",
 			NotifiedAt: time.Now(),
 			IsRead:     false,
@@ -20,7 +20,7 @@ func TestRemindNotice(t *testing.T) {
 		{
 			NoticeID:   "notice-003",
 			UserID:     "user-001",
-			SenderType: models.SenderTypeFriend,
+			SenderID:   "user-002",
 			Title:      "【フレンド】user2があなたを応援しています",
 			NotifiedAt: time.Now(),
 			IsRead:     false,
@@ -60,10 +60,10 @@ func TestRemindNotice(t *testing.T) {
 		)
 	}
 
-	if results[0].SenderType != models.SenderTypeOfficial {
+	if results[0].SenderID != "" {
 		t.Fatalf(
-			"unexpected SenderType: %s",
-			results[0].SenderType,
+			"unexpected SenderID: %s",
+			results[0].SenderID,
 		)
 	}
 
@@ -81,11 +81,17 @@ func TestRemindNotice(t *testing.T) {
 		)
 	}
 
-	if results[1].SenderType != models.SenderTypeFriend {
+	if results[1].SenderID != "user-002" {
 		t.Fatalf(
-			"unexpected SenderType: %s",
-			results[1].SenderType,
+			"unexpected SenderID: %s",
+			results[1].SenderID,
 		)
 	}
 
+	if results[1].Title != "【フレンド】user2があなたを応援しています" {
+		t.Fatalf(
+			"unexpected Title: %s",
+			results[1].Title,
+		)
+	}
 }
