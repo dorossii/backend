@@ -82,6 +82,7 @@ func GetFriendRequests(userID string) ([]FriendRequest, error) {
 	return FriendReqests, nil
 }
 
+// 嫌がらせ設定
 func PostAttackerSettings(userID string, targetUser string) error {
 	// 空文字ならランダム設定
 	if targetUser == "" {
@@ -93,7 +94,7 @@ func PostAttackerSettings(userID string, targetUser string) error {
 		return nil
 	}
 
-	// 指定ユーザーの場合は friend check
+	// 指定ユーザーの場合はフレンドチェック
 	isFriend, err := repositories.IsFriend(userID, targetUser)
 	if err != nil {
 		return err
