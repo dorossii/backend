@@ -72,7 +72,7 @@ func GetInviteURL(ctx echo.Context) error {
 }
 
 type PostAttackerSettingsRequest struct {
-	TargetUser string `json:"target_user"`
+	TargetUser string `json:"TargetUser"`
 }
 
 // 嫌がらせする人の設定

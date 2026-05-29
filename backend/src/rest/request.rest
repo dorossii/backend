@@ -121,7 +121,7 @@ Content-Type: application/json
 UserID: user-001
 
 {
-	"target_user":"user-003"
+	"TargetUser":"user-003"
 }
 
 
