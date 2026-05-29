@@ -12,6 +12,14 @@ var (
 )
 
 func SendFriendRequest(userID, friendID string) error {
+	// 両方のユーザーが存在するか
+	if _, err := repositories.GetUser(userID); err != nil {
+		return err
+	}
+	if _, err := repositories.GetUser(friendID); err != nil {
+		return err
+	}
+
 	existing, err := repositories.GetFriendShipAny(userID, friendID)
 	if err != nil {
 		return err
