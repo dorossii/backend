@@ -10,7 +10,7 @@ import (
 var (
 	ErrAlreadySent     = errors.New("すでにフレンド申請済みです")
 	ErrAlreadyReceived = errors.New("相手からすでに申請が届いています")
-	ErrFriendNotFound = errors.New("指定されたフレンドが存在しません")
+	ErrFriendNotFound  = errors.New("指定されたフレンドが存在しません")
 )
 
 func SendFriendRequest(userID, friendID string) error {
@@ -95,12 +95,12 @@ func PostAttackerSettings(userID string, targetUser string) error {
 	}
 
 	// 指定ユーザーの場合はフレンドチェック
-	isFriend, err := repositories.IsFriend(userID, targetUser)
+	friendShip, err := repositories.GetFriendShipAny(userID, targetUser)
 	if err != nil {
 		return err
 	}
 
-	if !isFriend {
+	if friendShip == nil {
 		return ErrFriendNotFound
 	}
 
