@@ -1,6 +1,7 @@
 package services
 
 import (
+	"backend/logger"
 	"backend/models"
 	"backend/repositories"
 	"errors"
@@ -9,9 +10,18 @@ import (
 var (
 	ErrAlreadySent     = errors.New("すでにフレンド申請済みです")
 	ErrAlreadyReceived = errors.New("相手からすでに申請が届いています")
+	ErrFriendNotFound  = errors.New("指定されたフレンドが存在しません")
 )
 
 func SendFriendRequest(userID, friendID string) error {
+	// 両方のユーザーが存在するか
+	if _, err := repositories.GetUser(userID); err != nil {
+		return err
+	}
+	if _, err := repositories.GetUser(friendID); err != nil {
+		return err
+	}
+
 	existing, err := repositories.GetFriendShipAny(userID, friendID)
 	if err != nil {
 		return err
@@ -110,4 +120,35 @@ func GetFriendRequests(userID string) ([]FriendRequest, error) {
 	}
 
 	return FriendReqests, nil
+}
+
+// 嫌がらせ設定
+func PostAttackerSettings(userID string, targetUser string) error {
+	// 空文字ならランダム設定
+	if targetUser == "" {
+		err := repositories.UpdateAttackerSettings(userID, "")
+
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	// 指定ユーザーの場合はフレンドチェック
+	friendShip, err := repositories.GetFriendShipAny(userID, targetUser)
+	if err != nil {
+		return err
+	}
+
+	if friendShip == nil {
+		return ErrFriendNotFound
+	}
+
+	err = repositories.UpdateAttackerSettings(userID, targetUser)
+	if err != nil {
+		logger.PrintErr("update attacker settings", err)
+		return err
+	}
+
+	return nil
 }

@@ -206,6 +206,97 @@ func TestGetFriendRequests_Empty(t *testing.T) {
 	}
 }
 
+func seedFriend(t *testing.T) {
+	t.Helper()
+
+	friend := models.FriendShips{
+		UserID:   "user-001",
+		FriendID: "user-002",
+		Status:   models.FriendStatusAccepted,
+	}
+
+	if err := models.DB.Create(&friend).Error; err != nil {
+		t.Fatal(err)
+	}
+}
+
+// 嫌がらせ設定
+func TestPostAttackerSettings(t *testing.T) {
+	truncateFriendShips(t)
+
+	TestRegisterUser(t)
+	seedFriend(t)
+
+	err := services.PostAttackerSettings("user-001", "user-002")
+	if err != nil {
+		t.Fatalf("PostAttackerSettings failed: %v", err)
+	}
+
+	var setting models.User
+
+	err = models.DB.
+		First(&setting, "user_id = ?", "user-001").
+		Error
+
+	if err != nil {
+		t.Fatalf("record not found: %v", err)
+	}
+
+	if setting.TargetUser != "user-002" {
+		t.Fatalf(
+			"unexpected target user: %s",
+			setting.TargetUser,
+		)
+	}
+}
+
+// 嫌がらせ設定(ランダム攻撃設定)
+func TestPostAttackerSettings_RandomMode(t *testing.T) {
+	truncateFriendShips(t)
+
+	TestRegisterUser(t)
+
+	err := services.PostAttackerSettings("user-001", "")
+	if err != nil {
+		t.Fatalf("PostAttackerSettings failed: %v", err)
+	}
+
+	var setting models.User
+
+	err = models.DB.
+		First(&setting, "user_id = ?", "user-001").
+		Error
+
+	if err != nil {
+		t.Fatalf("record not found: %v", err)
+	}
+
+	if setting.TargetUser != "" {
+		t.Fatalf(
+			"expected empty target user, got: %s",
+			setting.TargetUser,
+		)
+	}
+}
+
+// 嫌がらせ設定(エラー系:フレンドがいない)
+func TestPostAttackerSettings_FriendNotFound(t *testing.T) {
+	truncateFriendShips(t)
+
+	TestRegisterUser(t)
+
+	err := services.PostAttackerSettings("user-001", "user-999")
+
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+
+	if err != services.ErrFriendNotFound {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+
 // 承認済みフレンドが正しく取得できる（自分が申請した場合）
 func TestGetFriends_AsSender(t *testing.T) {
 	truncateFriendShips(t)
