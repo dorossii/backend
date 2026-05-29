@@ -16,6 +16,8 @@ func truncateFriendShips(t *testing.T) {
 func TestSendFriendRequest(t *testing.T) {
 	truncateFriendShips(t)
 
+	TestRegisterUser(t)
+
 	err := services.SendFriendRequest("user-001", "user-002")
 	if err != nil {
 		t.Fatalf("SendFriendRequest failed: %v", err)
@@ -33,6 +35,8 @@ func TestSendFriendRequest(t *testing.T) {
 func TestSendFriendRequest_AlreadySent(t *testing.T) {
 	truncateFriendShips(t)
 
+	TestRegisterUser(t)
+
 	if err := services.SendFriendRequest("user-001", "user-002"); err != nil {
 		t.Fatalf("first SendFriendRequest failed: %v", err)
 	}
@@ -48,6 +52,8 @@ func TestSendFriendRequest_AlreadySent(t *testing.T) {
 
 func TestSendFriendRequest_AlreadyReceived(t *testing.T) {
 	truncateFriendShips(t)
+
+	TestRegisterUser(t)
 
 	// 相手から先に申請済み
 	if err := services.SendFriendRequest("user-002", "user-001"); err != nil {
@@ -66,6 +72,8 @@ func TestSendFriendRequest_AlreadyReceived(t *testing.T) {
 // user-002 -> user-001 の申請を user-001 が承認する正常系
 func TestAcceptFriendRequest(t *testing.T) {
 	truncateFriendShips(t)
+
+	TestRegisterUser(t)
 
 	if err := services.SendFriendRequest("user-002", "user-001"); err != nil {
 		t.Fatalf("SendFriendRequest failed: %v", err)
@@ -88,6 +96,8 @@ func TestAcceptFriendRequest(t *testing.T) {
 func TestAcceptFriendRequest_NotFound(t *testing.T) {
 	truncateFriendShips(t)
 
+	TestRegisterUser(t)
+
 	err := services.AcceptFriendRequest("user-001", "user-002")
 	if err == nil {
 		t.Fatal("expected error but got nil")
@@ -97,6 +107,8 @@ func TestAcceptFriendRequest_NotFound(t *testing.T) {
 // 自分が申請者側の場合は承認不可
 func TestAcceptFriendRequest_CannotAcceptOwnRequest(t *testing.T) {
 	truncateFriendShips(t)
+
+	TestRegisterUser(t)
 
 	// user-001 -> user-002 の申請
 	if err := services.SendFriendRequest("user-001", "user-002"); err != nil {
@@ -113,6 +125,8 @@ func TestAcceptFriendRequest_CannotAcceptOwnRequest(t *testing.T) {
 // 自分宛の pending リクエスト一覧が取得できる
 func TestGetFriendRequests(t *testing.T) {
 	truncateFriendShips(t)
+
+	TestRegisterUser(t)
 
 	// user-002, user-003 から user-001 へ申請
 	if err := services.SendFriendRequest("user-002", "user-001"); err != nil {
@@ -143,6 +157,8 @@ func TestGetFriendRequests(t *testing.T) {
 func TestGetFriendRequests_ExcludesSentRequests(t *testing.T) {
 	truncateFriendShips(t)
 
+	TestRegisterUser(t)
+
 	// user-001 から user-002 へ申請（自分が送った側）
 	if err := services.SendFriendRequest("user-001", "user-002"); err != nil {
 		t.Fatalf("SendFriendRequest failed: %v", err)
@@ -160,6 +176,8 @@ func TestGetFriendRequests_ExcludesSentRequests(t *testing.T) {
 // 承認済みのリクエストは一覧に含まれない
 func TestGetFriendRequests_ExcludesAccepted(t *testing.T) {
 	truncateFriendShips(t)
+
+	TestRegisterUser(t)
 
 	if err := services.SendFriendRequest("user-002", "user-001"); err != nil {
 		t.Fatalf("SendFriendRequest failed: %v", err)
@@ -180,6 +198,8 @@ func TestGetFriendRequests_ExcludesAccepted(t *testing.T) {
 // リクエストが0件の場合は空スライスを返す
 func TestGetFriendRequests_Empty(t *testing.T) {
 	truncateFriendShips(t)
+
+	TestRegisterUser(t)
 
 	reqs, err := services.GetFriendRequests("user-001")
 	if err != nil {
