@@ -2,7 +2,9 @@ package services_test
 
 import (
 	"backend/models"
+	"backend/repositories"
 	"backend/services"
+	"errors"
 	"testing"
 	"time"
 )
@@ -341,5 +343,90 @@ func TestGetFriends_Empty(t *testing.T) {
 	}
 	if len(friends) != 0 {
 		t.Fatalf("expected 0 friends, got %d", len(friends))
+	}
+}
+
+// 自分が申請したフレンド関係を削除できる
+func TestDeleteFriend_AsSender(t *testing.T) {
+	truncateFriendShips(t)
+
+	// user-001 -> user-002 の申請を作成・承認
+	if err := services.SendFriendRequest("user-001", "user-002"); err != nil {
+		t.Fatalf("SendFriendRequest failed: %v", err)
+	}
+	if err := services.AcceptFriendRequest("user-002", "user-001"); err != nil {
+		t.Fatalf("AcceptFriendRequest failed: %v", err)
+	}
+
+	// user-001 側から削除
+	if err := services.DeleteFriend("user-001", "user-002"); err != nil {
+		t.Fatalf("DeleteFriend failed: %v", err)
+	}
+
+	// レコードが削除されていることを確認
+	fs, err := repositories.GetFriendShipAny("user-001", "user-002")
+	if err != nil {
+		t.Fatalf("GetFriendShipAny failed: %v", err)
+	}
+	if fs != nil {
+		t.Fatal("expected nil but friendship still exists")
+	}
+}
+
+// 相手が申請したフレンド関係を削除できる
+func TestDeleteFriend_AsReceiver(t *testing.T) {
+	truncateFriendShips(t)
+
+	// user-002 -> user-001 の申請を作成・承認
+	if err := services.SendFriendRequest("user-002", "user-001"); err != nil {
+		t.Fatalf("SendFriendRequest failed: %v", err)
+	}
+	if err := services.AcceptFriendRequest("user-001", "user-002"); err != nil {
+		t.Fatalf("AcceptFriendRequest failed: %v", err)
+	}
+
+	// user-001 側から削除
+	if err := services.DeleteFriend("user-001", "user-002"); err != nil {
+		t.Fatalf("DeleteFriend failed: %v", err)
+	}
+
+	// レコードが削除されていることを確認
+	fs, err := repositories.GetFriendShipAny("user-001", "user-002")
+	if err != nil {
+		t.Fatalf("GetFriendShipAny failed: %v", err)
+	}
+	if fs != nil {
+		t.Fatal("expected nil but friendship still exists")
+	}
+}
+
+// pending 状態のフレンド関係は削除できない
+func TestDeleteFriend_NotAccepted(t *testing.T) {
+	truncateFriendShips(t)
+
+	// 申請のみで承認していない状態
+	if err := services.SendFriendRequest("user-001", "user-002"); err != nil {
+		t.Fatalf("SendFriendRequest failed: %v", err)
+	}
+
+	err := services.DeleteFriend("user-001", "user-002")
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+	if !errors.Is(err, services.ErrFriendShipNotAccepted) {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// フレンド関係が存在しない場合はエラーを返す
+func TestDeleteFriend_NotFound(t *testing.T) {
+	truncateFriendShips(t)
+
+	err := services.DeleteFriend("user-001", "user-002")
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+	if !errors.Is(err, services.ErrFriendShipNotFound) {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
