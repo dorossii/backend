@@ -61,6 +61,20 @@ func GetReceivedFriendRequests(ctx echo.Context) error {
 }
 
 
+// GetFriends は承認済みフレンドの一覧を返すハンドラ
+func GetFriends(ctx echo.Context) error {
+	// JWTミドルウェアで検証済みのユーザーIDを取得
+	userID := ctx.Get("UserID").(string)
+
+	// フレンド一覧を取得
+	friends, err := services.GetFriends(userID)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]interface{}{"friends": friends})
+}
+
 func GetInviteURL(ctx echo.Context) error {
 	userID := ctx.Get("UserID").(string)
 
