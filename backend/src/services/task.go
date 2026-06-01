@@ -5,14 +5,10 @@ import (
 	"backend/models"
 	"backend/repositories"
 
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
 )
-
-// errors
-var ErrFriendNotFound = errors.New("指定されたフレンドが存在しません")
 
 func GetTasks(userID string) ([]repositories.TaskResponse, error) {
 	tasks, err := repositories.GetUserTasks(userID)
