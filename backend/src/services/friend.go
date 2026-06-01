@@ -98,6 +98,31 @@ func GetFriends(userID string) ([]FriendInfo, error) {
 	return friends, nil
 }
 
+var (
+	ErrFriendShipNotFound   = errors.New("フレンド関係が存在しません")
+	ErrFriendShipNotAccepted = errors.New("承認済みのフレンド関係ではありません")
+)
+
+// DeleteFriend はフレンド関係を削除する
+func DeleteFriend(userID, friendID string) error {
+	// GetFriendShipAny で双方向いずれかのレコードを取得
+	fs, err := repositories.GetFriendShipAny(userID, friendID)
+	if err != nil {
+		return err
+	}
+	if fs == nil {
+		return ErrFriendShipNotFound
+	}
+
+	// 承認済みのフレンド関係のみ削除可能
+	if fs.Status != models.FriendStatusAccepted {
+		return ErrFriendShipNotAccepted
+	}
+
+	// 取得したレコードを削除
+	return repositories.DeleteFriendShip(fs)
+}
+
 // フレンド申請一覧取得
 func GetFriendRequests(userID string) ([]FriendRequest, error) {
 	// 相手からのフレンドリクエスト

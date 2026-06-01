@@ -56,3 +56,9 @@ func GetFriends(userID string) ([]*models.User, error) {
 		Find(&users).Error
 	return users, err
 }
+
+// DeleteFriendShip は取得済みのフレンドシップレコードを削除する
+func DeleteFriendShip(fs *models.FriendShips) error {
+	// 複合主キーを明示的に指定して物理削除する
+	return models.DB.Where("user_id = ? AND friend_id = ?", fs.UserID, fs.FriendID).Delete(&models.FriendShips{}).Error
+}

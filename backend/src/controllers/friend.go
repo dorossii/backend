@@ -75,6 +75,29 @@ func GetFriends(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, map[string]interface{}{"friends": friends})
 }
 
+// DeleteFriend はフレンド関係を削除するハンドラ
+func DeleteFriend(ctx echo.Context) error {
+	// JWTミドルウェアで検証済みのユーザーIDを取得
+	userID := ctx.Get("UserID").(string)
+
+	// パスパラメータから削除対象のフレンドIDを取得
+	friendID := ctx.Param("id")
+	if friendID == "" {
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "id is required"})
+	}
+
+	// フレンド関係を削除
+	err := services.DeleteFriend(userID, friendID)
+	if err != nil {
+		if errors.Is(err, services.ErrFriendShipNotFound) || errors.Is(err, services.ErrFriendShipNotAccepted) {
+			return ctx.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
+		}
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]interface{}{})
+}
+
 func GetInviteURL(ctx echo.Context) error {
 	userID := ctx.Get("UserID").(string)
 
