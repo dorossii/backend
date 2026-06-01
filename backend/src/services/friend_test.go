@@ -459,6 +459,7 @@ func TestGetFriends_Empty(t *testing.T) {
 
 // 自分が申請したフレンド関係を削除できる
 func TestDeleteFriend_AsSender(t *testing.T) {
+	TestRegisterUser(t)
 	truncateFriendShips(t)
 
 	// user-001 -> user-002 の申請を作成・承認
@@ -486,6 +487,7 @@ func TestDeleteFriend_AsSender(t *testing.T) {
 
 // 相手が申請したフレンド関係を削除できる
 func TestDeleteFriend_AsReceiver(t *testing.T) {
+	TestRegisterUser(t)
 	truncateFriendShips(t)
 
 	// user-002 -> user-001 の申請を作成・承認
@@ -513,6 +515,7 @@ func TestDeleteFriend_AsReceiver(t *testing.T) {
 
 // pending 状態のフレンド関係は削除できない
 func TestDeleteFriend_NotAccepted(t *testing.T) {
+	TestRegisterUser(t)
 	truncateFriendShips(t)
 
 	// 申請のみで承認していない状態
