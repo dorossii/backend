@@ -70,6 +70,22 @@ services:
       timeout: 10s
       retries: 5
 
+  mysql-test:
+    hostname: db-test
+    image: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      TZ: Asia/Tokyo
+    tmpfs:
+      - /var/lib/mysql
+    volumes:
+      - ./database/script/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "db-test", "-u", "root", "-proot" ]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+
 volumes:
   dbdata:
     driver: local

@@ -78,25 +78,36 @@ tasks:
       Build_Image:
         sh: docker build -q ./openssl
   
+  # テスト用DBを起動
+  test-up:
+    cmds:
+      - docker compose -f docker-compose.yaml -f docker-compose.test.yml up mysql-test -d --wait
+
+  # テスト用DBを起動してから全テストを実行
+  test-setup:
+    cmds:
+      - task: test-up
+      - task: test
+
   # 全テストを実行
   test:
     cmds:
-      - docker compose exec app sh -c "cd /app && go test -v -p 1 ./..."
+      - docker compose -f docker-compose.yaml -f docker-compose.test.yml run --rm --no-deps app -c "cd /app && go test -v -p 1 ./..."
 
   # models のテストを実行
   test:models:
     cmds:
-      - docker compose exec app sh -c "cd /app/models && go test -v"
+      - docker compose -f docker-compose.yaml -f docker-compose.test.yml run --rm --no-deps app -c "cd /app/models && go test -v"
 
   # repositories のテストを実行
   test:repositories:
     cmds:
-      - docker compose exec app sh -c "cd /app/repositories && go test -v"
+      - docker compose -f docker-compose.yaml -f docker-compose.test.yml run --rm --no-deps app -c "cd /app/repositories && go test -v"
 
   # services のテストを実行
   test:services:
     cmds:
-      - docker compose exec app sh -c "cd /app/services && go test -v"
+      - docker compose -f docker-compose.yaml -f docker-compose.test.yml run --rm --no-deps app -c "cd /app/services && go test -v"
 
   config:
     cmds:

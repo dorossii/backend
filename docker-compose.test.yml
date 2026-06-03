@@ -1,0 +1,16 @@
+name: dorossii-backend
+
+services:
+  app:
+    env_file: []
+    environment:
+      DATABASE_DSN: "main:main@tcp(db-test:3306)/maindb?charset=utf8mb4&parseTime=True&loc=Local"
+    depends_on:
+      mysql-test:
+        condition: service_healthy
+    build:
+      context: ./backend
+      dockerfile: dockerfile
+      target: develop
+    volumes:
+      - ./backend/src:/app 
