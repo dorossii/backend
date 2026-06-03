@@ -2,6 +2,7 @@ package services
 
 import (
 	"backend/logger"
+	"backend/models"
 	"backend/repositories"
 	"errors"
 	"math/rand"
@@ -23,6 +24,36 @@ func GetTasks(userID string) ([]repositories.TaskResponse, error) {
 		return []repositories.TaskResponse{}, err
 	}
 	return tasks, nil
+}
+
+// 煽りメッセージの登録
+func PostTaskTauntMessage(userId string, friendId string, msg string) error {
+	// フレンド存在確認
+	friendShip, err := repositories.GetFriendShipAny(userId, friendId)
+	if err != nil {
+		return err
+	}
+
+	if friendShip == nil {
+		return ErrFriendNotFound
+	}
+
+	// メッセージの登録
+	notice := &models.RemindNotice{
+		NoticeID:   uuid.NewString(),
+		UserID:     userId,
+		SenderID:   friendId,
+		Title:      msg,
+		NotifiedAt: time.Now(),
+	}
+
+	err = repositories.CreateRemindNotiec(notice)
+	if err != nil {
+		logger.PrintErr("create remind notice", err)
+		return err
+	}
+
+	return nil
 }
 
 type PutTaskStatusResponse struct {

@@ -12,4 +12,5 @@ type User struct {
 	Combo       int       `json:"Combo" default:"0"`         // 連続タスク達成数
 	TargetUser  string    `json:"TargetUser"`                // 嫌がらせ対象のユーザのUserID
 	BgColor     string    `json:"BgColor" default:"#ffb6c1"` // ユーザの背景色
+	Icon        string    `json:"Icon"`                      // アイコン識別子
 }

@@ -43,18 +43,6 @@ func GetIncomingFriendShipsByStatus(userID string, status models.FriendStatus) (
 	return fs, err
 }
 
-func GetFriends(userID string)([]models.FriendShips, error) {
-	var friends []models.FriendShips
-
-	err := models.DB.Where("user_id = ? AND status = ?", userID, models.FriendStatusAccepted,).Find(&friends).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return friends, nil
-
-}
-
 func GetRescueUserIDs(userID string)([]models.HelpTargets, error) {
 var helpTargets []models.HelpTargets
 

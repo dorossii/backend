@@ -45,7 +45,7 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 			task.POST("/:id/image", TempController)
 
 			// タスク煽りメッセージ
-			task.POST("/:id/message", TempController)
+			task.POST("/message", controllers.PostTauntMessageHandler)
 
 			// 写真確認
 			task.GET("/:id/image", TempController)
@@ -62,7 +62,7 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 	friend := router.Group("/friend", middlewares.RequireAuth)
 	{
 		// フレンド一覧取得
-		friend.GET("", TempController)
+		friend.GET("", controllers.GetFriends)
 
 		// フレンド招待
 		friend.GET("/invite", controllers.GetInviteURL)
@@ -77,10 +77,10 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		friend.GET("/received", controllers.GetReceivedFriendRequests)
 
 		// フレンド削除
-		friend.DELETE("/:id", TempController)
+		friend.DELETE("/:id", controllers.DeleteFriend)
 
 		// 嫌がらせする人の設定
-		friend.PUT("/attack", TempController)
+		friend.PUT("/attack", controllers.PostAttackerSettingsHandler)
 
 		// レスキューする人の設定
 		friend.POST("/rescue", TempController)

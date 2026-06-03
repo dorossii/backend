@@ -1,6 +1,9 @@
-@base_url = ""
+@base_url = https://localhost:8947/app
 @task_id = ""
 @friend_id = ""
+
+###
+GET {{base_url}}/
 
 ### ユーザー登録
 POST {{base_url}}/user/register HTTP/1.1
@@ -58,6 +61,7 @@ Content-Type: application/json
 GET {{base_url}}/user/task/ HTTP/1.1
 
 
+@task_id = task-001
 ### タスク詳細
 GET {{base_url}}/user/task/{{task_id}} HTTP/1.1
 
@@ -71,10 +75,12 @@ Content-Type: application/json
 }
 
 ### タスクメッセージ送信
-POST {{base_url}}/user/task/{{task_id}}/message HTTP/1.1
+POST {{base_url}}/user/task/message HTTP/1.1
 Content-Type: application/json
+UserID: user-001
 
 {
+  "friendId":"user-003",
 	"message": "お前の部屋、きたなすぎ"
 }
 
@@ -118,9 +124,10 @@ DELETE {{base_url}}/friend/{{friend_id}} HTTP/1.1
 ### 嫌がらせする人の設定
 PUT {{base_url}}/friend/attack HTTP/1.1
 Content-Type: application/json
+UserID: user-001
 
 {
-	"TargetUser":"uuid"
+	"TargetUser":"user-003"
 }
 
 
