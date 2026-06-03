@@ -3,6 +3,17 @@ package services
 import (
 	"backend/logger"
 	"backend/repositories"
+	"errors"
+	"math/rand"
+	"time"
+)
+
+var (
+	ErrInvalidTaskStatus = errors.New("無効なタスクステータスです")
+	ErrImageRequired     = errors.New("画像必須です")
+	ErrTaskExpired       = errors.New("タスクの有効期間外です")
+	ErrTaskNotFound      = errors.New("タスクが見つかりません")
+	ErrTaskStatusAlreadyUpdated = errors.New("すでにタスクステータスが更新されています")
 )
 
 func GetTasks(userID string) ([]repositories.TaskResponse, error) {
@@ -12,4 +23,129 @@ func GetTasks(userID string) ([]repositories.TaskResponse, error) {
 		return []repositories.TaskResponse{}, err
 	}
 	return tasks, nil
+}
+
+type PutTaskStatusResponse struct {
+	IsChanged    bool
+	RequireImage bool
+}
+
+const (
+	TaskStatusComplete   = "complete"
+	TaskStatusPending    = "pending"
+	TaskStatusIncomplete = "incomplete"
+)
+
+const GarbagePower = 18 // 難易度1 = 18p汚さ減る
+
+// 　タスクステータス更新(完了•未完了)
+func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusResponse, error) {
+	task, err := repositories.GetTask(taskID)
+	if err != nil {
+		return PutTaskStatusResponse{}, err
+	}
+
+	if status == string(task.Status) {
+		return PutTaskStatusResponse{}, ErrTaskStatusAlreadyUpdated
+	}
+
+	switch status {
+	case TaskStatusComplete:
+		// 完了処理
+		baseTask, err := repositories.GetBaseTask(task.BaseID)
+		if err != nil {
+			return PutTaskStatusResponse{}, err
+		}
+
+		// TODO: baseと分けるべき？？
+		if task.TaskID == "" || baseTask.BaseID == "" {
+			return PutTaskStatusResponse{}, ErrTaskNotFound
+		}
+
+		// タスクの有効期間 検証
+		now := time.Now()
+		if now.Before(task.StartTime) || now.After(task.EndTime) {
+			return PutTaskStatusResponse{}, ErrTaskExpired
+		}
+
+		err = repositories.UpdateTaskStatus(taskID, TaskStatusComplete)
+		if err != nil {
+			return PutTaskStatusResponse{}, err
+		}
+
+		user, err := repositories.GetUser(userID)
+		if err != nil {
+			return PutTaskStatusResponse{}, err
+		}
+
+		difficultyLevel := baseTask.DifficultyLevel * GarbagePower // 汚さ数値の計算
+
+		// 自分の汚さの更新
+		err = repositories.UpdateDirtLevel(userID, -difficultyLevel)
+		if err != nil {
+			return PutTaskStatusResponse{}, err
+		}
+
+		// 嫌がらせ相手の選出
+		targetUserID := user.TargetUser
+
+		if targetUserID == "" {
+			friends, err := repositories.GetFriends(userID)
+			if err != nil {
+				return PutTaskStatusResponse{}, err
+			}
+
+			// レスキュー対象除外
+			rescueUserIDs, err := repositories.GetRescueUserIDs(userID)
+			if err != nil {
+				return PutTaskStatusResponse{}, err
+			}
+
+			rescueMap := make(map[string]bool)
+
+			// 検索しやすい形(Map)に変換
+			for _, id := range rescueUserIDs {
+				rescueMap[id.FriendID] = true
+			}
+
+			var candidates []string
+
+			for _, friend := range friends {
+				if !rescueMap[friend.FriendID] {
+					candidates = append(candidates, friend.FriendID)
+				}
+			}
+
+			if len(friends) > 0 {
+				targetUserID = candidates[rand.Intn(len(friends))]
+			}
+		}
+
+		// 相手の汚さの更新
+		if targetUserID != "" {
+			err = repositories.UpdateDirtLevel(targetUserID, difficultyLevel)
+			if err != nil {
+				return PutTaskStatusResponse{}, err
+			}
+		}
+
+		return PutTaskStatusResponse{
+			IsChanged:    true,
+			RequireImage: false,
+		}, nil
+
+	case TaskStatusIncomplete:
+		// 未完了処理
+
+
+
+
+		return PutTaskStatusResponse{
+			IsChanged: true,
+		}, nil
+
+	default:
+		return PutTaskStatusResponse{},
+			ErrInvalidTaskStatus
+	}
 }
