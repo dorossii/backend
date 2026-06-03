@@ -1,16 +1,40 @@
-name: dorossii-backend
+name: dorossii-backend-test
 
 services:
   app:
-    env_file: []
-    environment:
-      DATABASE_DSN: "main:main@tcp(db-test:3306)/maindb?charset=utf8mb4&parseTime=True&loc=Local"
-    depends_on:
-      mysql-test:
-        condition: service_healthy
+    hostname: app
+
     build:
       context: ./backend
       dockerfile: dockerfile
       target: develop
     volumes:
-      - ./backend/src:/app 
+      - ./backend/src:/app
+    env_file:
+      - ./config/test.env
+    tty: true
+    restart: always
+    depends_on:
+      # mysqlの起動を待つ
+      mysql-test:
+        condition: service_healthy
+        
+  mysql-test:
+    hostname: db-test
+    image: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      TZ: Asia/Tokyo
+    tmpfs:
+      - /var/lib/mysql
+    volumes:
+      - ./database/script/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "db-test", "-u", "root", "-proot" ]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  dbdata:
+    driver: local
