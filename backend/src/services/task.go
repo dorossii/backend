@@ -9,10 +9,10 @@ import (
 )
 
 var (
-	ErrInvalidTaskStatus = errors.New("無効なタスクステータスです")
-	ErrImageRequired     = errors.New("画像必須です")
-	ErrTaskExpired       = errors.New("タスクの有効期間外です")
-	ErrTaskNotFound      = errors.New("タスクが見つかりません")
+	ErrInvalidTaskStatus        = errors.New("無効なタスクステータスです")
+	ErrImageRequired            = errors.New("画像必須です")
+	ErrTaskExpired              = errors.New("タスクの有効期間外です")
+	ErrTaskNotFound             = errors.New("タスクが見つかりません")
 	ErrTaskStatusAlreadyUpdated = errors.New("すでにタスクステータスが更新されています")
 )
 
@@ -134,11 +134,31 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			RequireImage: false,
 		}, nil
 
+	case TaskStatusPending:
+		// 認証待ち処理
+		if task.RequireImage && task.ImageID == "" {
+			return PutTaskStatusResponse{}, ErrImageRequired
+		}
+
+		err = repositories.UpdateTaskStatus(taskID, TaskStatusPending)
+		if err != nil {
+			return PutTaskStatusResponse{}, err
+		}
+
+		if task.RequireImage {
+			return PutTaskStatusResponse{
+				IsChanged:    true,
+				RequireImage: true,
+			}, nil
+		}
+
+		return PutTaskStatusResponse{
+			IsChanged:    true,
+			RequireImage: false,
+		}, nil
+
 	case TaskStatusIncomplete:
 		// 未完了処理
-
-
-
 
 		return PutTaskStatusResponse{
 			IsChanged: true,
