@@ -67,11 +67,18 @@ func TestGetTasks(t *testing.T) {
 		t.Errorf("タスクが見つかりません")
 	}
 
+	//取得したタスクの難易度が1から5の範囲内であることを確認
+	for _, task := range tasks {
+		if task.DifficultyLevel < 1 || task.DifficultyLevel > 5 {
+			t.Errorf("タスクの難易度が不正です: %d", task.DifficultyLevel)
+		}
+	}
+
 	log.Printf("取得したタスク数: %d", len(tasks))
 
 	// 取得したタスクの内容を確認
 	for _, task := range tasks {
-		log.Printf("タスクID: %s, タスク名: %s, 期限: %s", task.TaskID, task.TaskName, task.EndTime.Format("2006-01-02"))
+		log.Printf("タスクID: %s, タスク名: %s, 期限: %s,難易度: %d", task.TaskID, task.TaskName, task.EndTime.Format("2006-01-02"), task.DifficultyLevel)
 	}
 }
 
