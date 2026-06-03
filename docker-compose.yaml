@@ -25,8 +25,10 @@ services:
     volumes:
       - ./backend/src:/app
     env_file:
-      - ./config/app.env
-      - ./openssl/jwtKeys/public.env
+      - path: ./config/app.env
+        required: false
+      - path: ./openssl/jwtKeys/public.env
+        required: false
     tty: true
     restart: always
     depends_on:
