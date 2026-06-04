@@ -58,3 +58,7 @@ func GetBaseTask(baseID string)(models.BaseTask, error) {
 func UpdateTaskStatus(taskID string, status string) error {
     return models.DB.Model(&models.Task{}).Where("task_id = ?", taskID).Update("status", status).Error
 }
+
+func UpdateTaskMessage(taskID string, message string) error {
+    return models.DB.Model(&models.Task{}).Where("task_id = ?", taskID).Update("message", message).Error
+}

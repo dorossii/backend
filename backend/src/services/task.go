@@ -5,13 +5,14 @@ import (
 	"backend/models"
 	"backend/repositories"
 	"errors"
+	"log"
 	"math/rand"
 	"time"
 )
 
 var (
 	ErrInvalidTaskStatus        = errors.New("無効なタスクステータスです")
-	ErrImageRequired            = errors.New("画像必須です")
+	ErrInvalidRequest           = errors.New("必要なパラメータの不足です")
 	ErrTaskExpired              = errors.New("タスクの有効期間外です")
 	ErrTaskNotFound             = errors.New("タスクが見つかりません")
 	ErrTaskStatusAlreadyUpdated = errors.New("すでにタスクステータスが更新されています")
@@ -142,8 +143,8 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			var candidates []string
 
 			for _, friend := range friends {
-				if !rescueMap[friend.FriendID] {
-					candidates = append(candidates, friend.FriendID)
+				if !rescueMap[friend.UserID] {
+					candidates = append(candidates, friend.UserID)
 				}
 			}
 
@@ -168,7 +169,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 	case TaskStatusPending:
 		// 認証待ち処理
 		if task.RequireImage && task.ImageID == "" {
-			return PutTaskStatusResponse{}, ErrImageRequired
+			return PutTaskStatusResponse{}, ErrInvalidRequest
 		}
 
 		err = repositories.UpdateTaskStatus(taskID, TaskStatusPending)
@@ -190,6 +191,23 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 
 	case TaskStatusIncomplete:
 		// 未完了処理
+		if string(task.Status) != TaskStatusPending {
+			return PutTaskStatusResponse{}, ErrTaskStatusAlreadyUpdated
+		}
+
+		if message == "" {
+			return PutTaskStatusResponse{}, ErrInvalidRequest
+		}
+
+		err = repositories.UpdateTaskStatus(taskID, TaskStatusIncomplete)
+		if err != nil {
+			return PutTaskStatusResponse{}, err
+		}
+
+		err = repositories.UpdateTaskMessage(taskID, message)
+				if err != nil {
+			return PutTaskStatusResponse{}, err
+		}
 
 		return PutTaskStatusResponse{
 			IsChanged: true,

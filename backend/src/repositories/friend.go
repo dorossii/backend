@@ -43,6 +43,20 @@ func GetIncomingFriendShipsByStatus(userID string, status models.FriendStatus) (
 	return fs, err
 }
 
+// GetFriends は userID の承認済みフレンドの User 情報一覧を返す
+func GetFriends(userID string) ([]*models.User, error) {
+	var users []*models.User
+
+	// friend_ships と JOIN し、自分が申請した・相手が申請したどちらの場合も取得する
+	// users.user_id != ? で自分自身をレスポンスから除外する
+	err := models.DB.
+		Joins("JOIN friend_ships ON (friend_ships.friend_id = users.user_id OR friend_ships.user_id = users.user_id)").
+		Where("(friend_ships.user_id = ? OR friend_ships.friend_id = ?) AND friend_ships.status = ? AND users.user_id != ?",
+			userID, userID, models.FriendStatusAccepted, userID).
+		Find(&users).Error
+	return users, err
+}
+
 func GetRescueUserIDs(userID string)([]models.HelpTargets, error) {
 var helpTargets []models.HelpTargets
 
