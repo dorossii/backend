@@ -544,3 +544,127 @@ func TestDeleteFriend_NotFound(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+
+// レスキュー設定(エラー系:フレンドがいない)
+func TestPostRescuerSettings_FriendNotFound(t *testing.T) {
+	err := services.PostRescuerSettings("user-001", []string{"user-999"})
+
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+
+	if err != services.ErrFriendNotFound {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// レスキュー設定(エラー系:フレンドが一人だけいない)
+func TestPostRescuerSettings_FriendNotFoundOneOfTwo(t *testing.T) {
+	truncateFriendShips(t)
+	
+	TestRegisterUser(t)	
+	seedFriend(t)
+	
+	err := services.PostRescuerSettings("user-001", []string{"user-002", "user-999"})
+
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+	
+	if err != services.ErrFriendNotFound {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// レスキュー設定(正常系)
+func TestPostRescuerSettings(t *testing.T) {
+	truncateFriendShips(t)
+
+	TestRegisterUser(t)
+	seedFriend(t)
+
+	err := services.PostRescuerSettings("user-001", []string{"user-002"})
+	if err != nil {
+		t.Fatalf("PostRescuerSettings failed: %v", err)
+	}
+
+	var setting models.HelpTargets
+
+	err = models.DB.
+		First(&setting, "user_id = ?", "user-001").
+		Error
+
+	if err != nil {
+		t.Fatalf("record not found: %v", err)
+	}
+	if setting.FriendID != "user-002" {
+		t.Fatalf(
+			"unexpected target user: %s",
+			setting.FriendID,
+		)
+	}
+}
+
+// レスキュー設定(正常系:複数人)
+func TestPostRescuerSettings_Multiple(t *testing.T) {
+	truncateFriendShips(t)
+
+	TestRegisterUser(t)
+	seedFriend(t)
+
+	err := services.PostRescuerSettings("user-001", []string{"user-002", "user-002"})
+	if err != nil {
+		t.Fatalf("PostRescuerSettings failed: %v", err)
+	}
+
+	var settings []models.HelpTargets
+
+	err = models.DB.
+		Where("user_id = ?", "user-001").
+		Find(&settings).
+		Error
+
+	if err != nil {
+		t.Fatalf("record not found: %v", err)
+	}
+	if len(settings) != 2 {
+		t.Fatalf("expected 2 settings, got %d", len(settings))
+	}
+	for _, s := range settings {
+		if s.FriendID != "user-002" {
+			t.Fatalf(
+				"unexpected target user: %s",
+				s.FriendID,
+			)
+		}
+	}
+}
+
+// レスキュー設定(正常系:ランダム設定)
+func TestPostRescuerSettings_RandomMode(t *testing.T) {
+	truncateFriendShips(t)
+
+	TestRegisterUser(t)
+
+	err := services.PostRescuerSettings("user-001", []string{})
+	if err != nil {
+		t.Fatalf("PostRescuerSettings failed: %v", err)
+	}
+
+	var setting models.HelpTargets
+
+	err = models.DB.
+		First(&setting, "user_id = ?", "user-001").
+		Error
+
+	if err != nil {
+		t.Fatalf("record not found: %v", err)
+	}
+	if setting.FriendID != "" {
+		t.Fatalf(
+			"expected empty target user, got: %s",
+			setting.FriendID,
+		)
+	}
+}

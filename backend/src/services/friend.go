@@ -177,3 +177,40 @@ func PostAttackerSettings(userID string, targetUser string) error {
 
 	return nil
 }
+
+func PostRescuerSettings(userID string, targetUsers []string) error {
+	// 空文字ならランダム設定
+	if len(targetUsers) == 0 {
+		err := repositories.UpdateRescuerSettings(userID, "")
+
+		if err != nil {
+			logger.PrintErr("update rescuer settings", err)
+			return err
+		}
+		return nil
+	}
+	
+	// 指定ユーザーの場合はフレンドチェック
+	for _, targetUser := range targetUsers {
+		friendShip, err := repositories.GetFriendShipAny(userID, targetUser)
+		if err != nil {
+			logger.PrintErr("get friend ship", err)
+			return err
+		}
+
+		if friendShip == nil {
+			logger.PrintErr("friend not found", errors.New("friend not found: "+targetUser))
+			return ErrFriendNotFound
+		}
+	}
+
+	//テーブルに各々保存
+	for _, targetUser := range targetUsers {
+		err := repositories.UpdateRescuerSettings(userID, targetUser)
+		if err != nil {
+			logger.PrintErr("update rescuer settings", err)
+			return err
+		}
+	}
+	return nil
+}
