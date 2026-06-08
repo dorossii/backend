@@ -43,7 +43,7 @@ jobs:
         with:
           context: ./backend
           file: ./backend/dockerfile
-          target: builder
+          target: release
           push: true
           tags: |
             ghcr.io/dorossii/backend:latest
