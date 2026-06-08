@@ -22,10 +22,10 @@ COPY ./src .
 # 依存関係をインストールする
 RUN go mod download
 
-# プロジェクトをビルドする
-RUN CGO_ENABLED=0 go build -o /go/bin/app
+# プロジェクトをビルドする (最適化ビルド)
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -trimpath -o /go/bin/app
 
 # 実行用のコンテナ
-FROM gcr.io/distroless/static-debian12
+FROM gcr.io/distroless/static-debian12 as release
 COPY --from=builder /go/bin/app /
 CMD ["/app"]
