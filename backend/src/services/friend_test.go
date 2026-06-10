@@ -532,6 +532,155 @@ func TestDeleteFriend_NotAccepted(t *testing.T) {
 	}
 }
 
+func truncateHelpTargets(t *testing.T) {
+	t.Helper()
+	if err := models.DB.Exec("TRUNCATE TABLE help_targets").Error; err != nil {
+		t.Fatal(err)
+	}
+}
+
+func seedHelpTarget(t *testing.T, userID, friendID string) {
+	t.Helper()
+	if err := models.DB.Create(&models.HelpTargets{UserID: userID, FriendID: friendID}).Error; err != nil {
+		t.Fatalf("seedHelpTarget failed: %v", err)
+	}
+}
+
+// フレンドが0件の場合は空スライスを返す
+func TestGetRescueFriends_Empty(t *testing.T) {
+	truncateFriendShips(t)
+	truncateUsers(t)
+	truncateHelpTargets(t)
+
+	result, err := services.GetRescueFriends("user-001")
+	if err != nil {
+		t.Fatalf("GetRescueFriends failed: %v", err)
+	}
+	if len(result) != 0 {
+		t.Fatalf("expected 0 friends, got %d", len(result))
+	}
+}
+
+// help_targets なし → isrescued: false
+func TestGetRescueFriends_IsRescuedFalse(t *testing.T) {
+	truncateFriendShips(t)
+	truncateUsers(t)
+	truncateHelpTargets(t)
+
+	createUser(t, "user-001", "Alice", "cat", "#ff0000")
+	createUser(t, "user-002", "Bob", "dog", "#00ff00")
+
+	if err := services.SendFriendRequest("user-001", "user-002"); err != nil {
+		t.Fatal(err)
+	}
+	if err := services.AcceptFriendRequest("user-002", "user-001"); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := services.GetRescueFriends("user-001")
+	if err != nil {
+		t.Fatalf("GetRescueFriends failed: %v", err)
+	}
+	if len(result) != 1 {
+		t.Fatalf("expected 1 friend, got %d", len(result))
+	}
+	if result[0].IsRescued {
+		t.Error("expected isrescued=false, got true")
+	}
+}
+
+// help_targets あり → isrescued: true
+func TestGetRescueFriends_IsRescuedTrue(t *testing.T) {
+	truncateFriendShips(t)
+	truncateUsers(t)
+	truncateHelpTargets(t)
+
+	createUser(t, "user-001", "Alice", "cat", "#ff0000")
+	createUser(t, "user-002", "Bob", "dog", "#00ff00")
+
+	if err := services.SendFriendRequest("user-001", "user-002"); err != nil {
+		t.Fatal(err)
+	}
+	if err := services.AcceptFriendRequest("user-002", "user-001"); err != nil {
+		t.Fatal(err)
+	}
+	seedHelpTarget(t, "user-001", "user-002")
+
+	result, err := services.GetRescueFriends("user-001")
+	if err != nil {
+		t.Fatalf("GetRescueFriends failed: %v", err)
+	}
+	if len(result) != 1 {
+		t.Fatalf("expected 1 friend, got %d", len(result))
+	}
+	if !result[0].IsRescued {
+		t.Error("expected isrescued=true, got false")
+	}
+}
+
+// フレンド3人、1人だけ help_targets に登録 → 各自の isrescued が正しい
+func TestGetRescueFriends_Mixed(t *testing.T) {
+	truncateFriendShips(t)
+	truncateUsers(t)
+	truncateHelpTargets(t)
+
+	createUser(t, "user-001", "Alice", "cat", "#ff0000")
+	createUser(t, "user-002", "Bob", "dog", "#00ff00")
+	createUser(t, "user-003", "Carol", "bird", "#0000ff")
+	createUser(t, "user-004", "Dave", "fish", "#ffff00")
+
+	for _, fid := range []string{"user-002", "user-003", "user-004"} {
+		if err := services.SendFriendRequest("user-001", fid); err != nil {
+			t.Fatal(err)
+		}
+		if err := services.AcceptFriendRequest(fid, "user-001"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	seedHelpTarget(t, "user-001", "user-002")
+
+	result, err := services.GetRescueFriends("user-001")
+	if err != nil {
+		t.Fatalf("GetRescueFriends failed: %v", err)
+	}
+	if len(result) != 3 {
+		t.Fatalf("expected 3 friends, got %d", len(result))
+	}
+
+	statusMap := map[string]bool{}
+	for _, r := range result {
+		statusMap[r.UserID] = r.IsRescued
+	}
+	if !statusMap["user-002"] {
+		t.Error("user-002 should be isrescued=true")
+	}
+	if statusMap["user-003"] || statusMap["user-004"] {
+		t.Error("user-003 and user-004 should be isrescued=false")
+	}
+}
+
+// pending フレンドは一覧に含まれない
+func TestGetRescueFriends_ExcludesPending(t *testing.T) {
+	truncateFriendShips(t)
+	truncateUsers(t)
+	truncateHelpTargets(t)
+
+	createUser(t, "user-001", "Alice", "cat", "#ff0000")
+	createUser(t, "user-002", "Bob", "dog", "#00ff00")
+
+	if err := services.SendFriendRequest("user-001", "user-002"); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := services.GetRescueFriends("user-001")
+	if err != nil {
+		t.Fatalf("GetRescueFriends failed: %v", err)
+	}
+	if len(result) != 0 {
+		t.Fatalf("expected 0 friends (pending excluded), got %d", len(result))
+	}
+}
+
 // フレンド関係が存在しない場合はエラーを返す
 func TestDeleteFriend_NotFound(t *testing.T) {
 	truncateFriendShips(t)
