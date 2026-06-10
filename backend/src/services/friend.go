@@ -180,55 +180,23 @@ func PostAttackerSettings(userID string, targetUser string) error {
 
 // レスキュー設定
 func PostRescuerSettings(userID string, targetUsers []string) error {
-	//トランザクションを開始
-	tx := models.DB.Begin()
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-	// まずは既存のレスキュー設定を削除
-	err := repositories.DeleteRescuerSettings(userID)
-	if err != nil {
-		logger.PrintErr("delete rescuer settings", err)
-		return err
-	}
-	// 空文字ならランダム設定
-	if len(targetUsers) == 0 {
-		err = repositories.UpdateRescuerSettings(userID, "")
-
-		if err != nil {
-			logger.PrintErr("update rescuer settings", err)
-			return err
-		}
-		return nil
-	}
-	
-	// 指定ユーザーの場合はフレンドチェック
+	// 指定ユーザーの場合はフレンドチェック（トランザクション外で先に実施）
 	for _, targetUser := range targetUsers {
 		friendShip, err := repositories.GetFriendShipAny(userID, targetUser)
 		if err != nil {
 			logger.PrintErr("get friend ship", err)
 			return err
 		}
-
 		if friendShip == nil {
 			logger.PrintErr("friend not found", errors.New("friend not found: "+targetUser))
 			return ErrFriendNotFound
 		}
 	}
 
-	//テーブルに各々保存
-	for _, targetUser := range targetUsers {
-		err := repositories.UpdateRescuerSettings(userID, targetUser)
-		if err != nil {
-			logger.PrintErr("update rescuer settings", err)
-			return err
-		}
-	}
-	// コミット
-	if err := tx.Commit().Error; err != nil {
-		logger.PrintErr("commit transaction", err)
+	// DB操作をトランザクションでまとめる
+	err := repositories.PostRescuerSettingsTx(userID, targetUsers)
+	if err != nil {
+		logger.PrintErr("post rescuer settings tx", err)
 		return err
 	}
 	return nil
