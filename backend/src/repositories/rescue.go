@@ -6,7 +6,7 @@ import (
 
 // レスキューを更新する
 func UpdateRescuerSettings(userID, targetUser string) error {
-	return models.DB.Model(&models.HelpTargets{}).Where("user_id = ?", userID).Create(&models.HelpTargets{UserID: userID, FriendID: targetUser}).Error
+	return models.DB.Model(&models.HelpTargets{}).Create(&models.HelpTargets{UserID: userID, FriendID: targetUser}).Error
 }
 
 // レスキューを削除する
