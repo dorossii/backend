@@ -178,10 +178,24 @@ func PostAttackerSettings(userID string, targetUser string) error {
 	return nil
 }
 
+// レスキュー設定
 func PostRescuerSettings(userID string, targetUsers []string) error {
+	//トランザクションを開始
+	tx := models.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+	// まずは既存のレスキュー設定を削除
+	err := repositories.DeleteRescuerSettings(userID)
+	if err != nil {
+		logger.PrintErr("delete rescuer settings", err)
+		return err
+	}
 	// 空文字ならランダム設定
 	if len(targetUsers) == 0 {
-		err := repositories.UpdateRescuerSettings(userID, "")
+		err = repositories.UpdateRescuerSettings(userID, "")
 
 		if err != nil {
 			logger.PrintErr("update rescuer settings", err)
@@ -211,6 +225,11 @@ func PostRescuerSettings(userID string, targetUsers []string) error {
 			logger.PrintErr("update rescuer settings", err)
 			return err
 		}
+	}
+	// コミット
+	if err := tx.Commit().Error; err != nil {
+		logger.PrintErr("commit transaction", err)
+		return err
 	}
 	return nil
 }
