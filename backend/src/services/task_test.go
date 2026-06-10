@@ -190,3 +190,394 @@ func TestPostTaskTauntMessage_FriendNotFound(t *testing.T) {
 		)
 	}
 }
+
+// タスクステータス更新(完了: 正常系)
+func TestPutTaskStatus_Complete(t *testing.T) {
+	TestRegisterUser(t)
+
+	task := models.Task{
+		TaskID:    "task-Complete",
+		BaseID:    "base-001",
+		UserID:    "user-001",
+		Status:    models.TaskStatusImcomplete,
+		StartTime: time.Now().Add(-1 * time.Hour),
+		EndTime:   time.Now().Add(1 * time.Hour),
+	}
+
+	if err := models.DB.Create(&task).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := services.PutTaskStatus(
+		"user-001",
+		"task-Complete",
+		services.TaskStatusComplete,
+		"",
+	)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !resp.IsChanged {
+		t.Fatal("expected IsChanged=true")
+	}
+
+	var updatedTask models.Task
+
+	if err := models.DB.
+		First(&updatedTask, "task_id = ?", "task-Complete").
+		Error; err != nil {
+		t.Fatal(err)
+	}
+
+	if updatedTask.Status != models.TaskStatusCompleted {
+		t.Fatalf(
+			"unexpected status: %v",
+			updatedTask.Status,
+		)
+	}
+}
+
+// タスクステータス更新(完了: タスク不存在)
+func TestPutTaskStatus_TaskNotFound(t *testing.T) {
+	TestRegisterUser(t)
+
+	_, err := services.PutTaskStatus(
+		"user-001",
+		"task-TaskNotFound",
+		services.TaskStatusComplete,
+		"",
+	)
+
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+
+	if err != services.ErrTaskNotFound {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// タスクステータス更新(完了: 有効期間外)
+func TestPutTaskStatus_Expired(t *testing.T) {
+	CreateSampleUser()
+
+	task := models.Task{
+		TaskID:    "task-Expired",
+		BaseID:    "base-001",
+		UserID:    "user-001",
+		Status:    models.TaskStatusImcomplete,
+		StartTime: time.Now().Add(-2 * time.Hour),
+		EndTime:   time.Now().Add(-1 * time.Hour), // 既に終了
+	}
+
+	if err := models.DB.Create(&task).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := services.PutTaskStatus(
+		"user-001",
+		"task-Expired",
+		services.TaskStatusComplete,
+		"",
+	)
+
+	if err != services.ErrTaskExpired {
+		t.Fatalf(
+			"expected ErrTaskExpired, got %v",
+			err,
+		)
+	}
+}
+
+// タスクステータス更新(認証待ち: 正常系)
+func TestPutTaskStatus_Pending(t *testing.T) {
+	TestRegisterUser(t)
+
+	task := models.Task{
+		TaskID:       "task-pending",
+		BaseID:       "base-001",
+		UserID:       "user-001",
+		Status:       models.TaskStatusImcomplete,
+		StartTime:    time.Now().Add(-1 * time.Hour),
+		EndTime:      time.Now().Add(1 * time.Hour),
+		ImageID:      "image-001",
+		RequireImage: false,
+	}
+
+	if err := models.DB.Create(&task).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := services.PutTaskStatus(
+		"user-001",
+		"task-pending",
+		services.TaskStatusPending,
+		"",
+	)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !resp.IsChanged {
+		t.Fatal("expected IsChanged=true")
+	}
+
+	if resp.RequireImage {
+		t.Fatal("expected RequireImage=false")
+	}
+
+	var updatedTask models.Task
+
+	if err := models.DB.
+		First(&updatedTask, "task_id = ?", "task-pending").
+		Error; err != nil {
+		t.Fatal(err)
+	}
+
+	if updatedTask.Status != models.TaskStatusPending {
+		t.Fatalf(
+			"unexpected status: %v",
+			updatedTask.Status,
+		)
+	}
+}
+
+// タスクステータス更新(承認待ち: 写真必須なのに画像なし)
+func TestPutTaskStatus_Pending_RequireImageButNoImageID(t *testing.T) {
+	TestRegisterUser(t)
+
+	task := models.Task{
+		TaskID:       "task-pending-no-image",
+		BaseID:       "base-001",
+		UserID:       "user-001",
+		Status:       models.TaskStatusImcomplete,
+		StartTime:    time.Now().Add(-1 * time.Hour),
+		EndTime:      time.Now().Add(1 * time.Hour),
+		ImageID:      "",     // 画像なし
+		RequireImage: true,   // 画像必須
+	}
+
+	if err := models.DB.Create(&task).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := services.PutTaskStatus(
+		"user-001",
+		"task-pending-no-image",
+		services.TaskStatusPending,
+		"",
+	)
+
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+
+	if err != services.ErrInvalidRequest {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// タスクステータス更新(未完了: 正常系)
+func TestPutTaskStatus_Incomplete(t *testing.T) {
+	TestRegisterUser(t)
+
+	task := models.Task{
+		TaskID:    "task-incomplete",
+		BaseID:    "base-001",
+		UserID:    "user-001",
+		Status:    models.TaskStatusPending, // Pendingから差し戻し
+		StartTime: time.Now().Add(-1 * time.Hour),
+		EndTime:   time.Now().Add(1 * time.Hour),
+	}
+
+	if err := models.DB.Create(&task).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	message := "普通に汚い"
+
+	resp, err := services.PutTaskStatus(
+		"user-001",
+		"task-incomplete",
+		services.TaskStatusIncomplete,
+		message,
+	)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !resp.IsChanged {
+		t.Fatal("expected IsChanged=true")
+	}
+
+	var updatedTask models.Task
+
+	if err := models.DB.
+		First(&updatedTask, "task_id = ?", "task-incomplete").
+		Error; err != nil {
+		t.Fatal(err)
+	}
+
+	if updatedTask.Status != models.TaskStatusImcomplete {
+		t.Fatalf(
+			"unexpected status: %v",
+			updatedTask.Status,
+		)
+	}
+
+	if updatedTask.Message != message {
+		t.Fatalf(
+			"unexpected message: %v",
+			updatedTask.Message,
+		)
+	}
+}
+
+// タスクステータス更新(未完了: 認証待ち以外から戻そうとする)
+func TestPutTaskStatus_Incomplete_NotPending(t *testing.T) {
+	TestRegisterUser(t)
+
+	task := models.Task{
+		TaskID:    "task-incomplete-not-pending",
+		BaseID:    "base-001",
+		UserID:    "user-001",
+		Status:    models.TaskStatusCompleted,
+		StartTime: time.Now().Add(-1 * time.Hour),
+		EndTime:   time.Now().Add(1 * time.Hour),
+	}
+
+	if err := models.DB.Create(&task).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := services.PutTaskStatus(
+		"user-001",
+		"task-incomplete-not-pending",
+		services.TaskStatusIncomplete,
+		"差し戻し理由",
+	)
+
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+
+	if err != services.ErrTaskStatusAlreadyUpdated {
+		t.Fatalf(
+			"unexpected error: %v",
+			err,
+		)
+	}
+}
+
+// タスクステータス更新(未完了: 拒否理由なし)
+func TestPutTaskStatus_Incomplete_EmptyMessage(t *testing.T) {
+	TestRegisterUser(t)
+
+	task := models.Task{
+		TaskID:    "task-incomplete-empty-message",
+		BaseID:    "base-001",
+		UserID:    "user-001",
+		Status:    models.TaskStatusPending,
+		StartTime: time.Now().Add(-1 * time.Hour),
+		EndTime:   time.Now().Add(1 * time.Hour),
+	}
+
+	if err := models.DB.Create(&task).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := services.PutTaskStatus(
+		"user-001",
+		"task-incomplete-empty-message",
+		services.TaskStatusIncomplete,
+		"",
+	)
+
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+
+	if err != services.ErrInvalidRequest {
+		t.Fatalf(
+			"unexpected error: %v",
+			err,
+		)
+	}
+}
+
+// タスクステータス更新(ステータス不正)
+func TestPutTaskStatus_InvalidStatus(t *testing.T) {
+	TestRegisterUser(t)
+
+	task := models.Task{
+		TaskID:    "task-invalid-status",
+		BaseID:    "base-001",
+		UserID:    "user-001",
+		Status:    models.TaskStatusImcomplete,
+		StartTime: time.Now().Add(-1 * time.Hour),
+		EndTime:   time.Now().Add(1 * time.Hour),
+	}
+
+	if err := models.DB.Create(&task).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := services.PutTaskStatus(
+		"user-001",
+		"task-invalid-status",
+		"invalid-status",
+		"",
+	)
+
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+
+	if err != services.ErrInvalidTaskStatus {
+		t.Fatalf(
+			"unexpected error: %v",
+			err,
+		)
+	}
+}
+
+
+// タスクステータス更新(同じステータスへの更新完了)
+func TestPutTaskStatus_AlreadyUpdated(t *testing.T) {
+	TestRegisterUser(t)
+
+	task := models.Task{
+		TaskID:    "task-already-updated",
+		BaseID:    "base-001",
+		UserID:    "user-001",
+		Status:    models.TaskStatusPending,
+		StartTime: time.Now().Add(-1 * time.Hour),
+		EndTime:   time.Now().Add(1 * time.Hour),
+	}
+
+	if err := models.DB.Create(&task).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := services.PutTaskStatus(
+		"user-001",
+		"task-already-updated",
+		services.TaskStatusPending,
+		"",
+	)
+
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+
+	if err != services.ErrTaskStatusAlreadyUpdated {
+		t.Fatalf(
+			"unexpected error: %v",
+			err,
+		)
+	}
+}
