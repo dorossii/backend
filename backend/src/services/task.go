@@ -5,9 +5,10 @@ import (
 	"backend/models"
 	"backend/repositories"
 	"errors"
-	"log"
 	"math/rand"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 var (
@@ -68,7 +69,24 @@ const (
 	TaskStatusIncomplete = "incomplete"
 )
 
-const GarbagePower = 18 // 難易度1 = 18p汚さ減る
+const GarbagePower = 18 // TODO: 難易度1 = 18p汚さ減る
+
+// 文字列を TaskStatus に変換する関数
+func ParseTaskStatus(s string) (models.TaskStatus, error) {
+	switch s {
+	case TaskStatusIncomplete:
+		return models.TaskStatusImcomplete, nil
+
+	case TaskStatusPending:
+		return models.TaskStatusPending, nil
+
+	case TaskStatusComplete:
+		return models.TaskStatusCompleted, nil
+
+	default:
+		return 0, ErrInvalidTaskStatus
+	}
+}
 
 // 　タスクステータス更新(完了•未完了)
 func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusResponse, error) {
@@ -77,7 +95,22 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		return PutTaskStatusResponse{}, err
 	}
 
-	if status == string(task.Status) {
+	if task.TaskID == "" {
+		return PutTaskStatusResponse{}, ErrTaskNotFound
+	}
+
+	// タスクの有効期間 検証
+	now := time.Now()
+	if now.Before(task.StartTime) || now.After(task.EndTime) {
+		return PutTaskStatusResponse{}, ErrTaskExpired
+	}
+
+	newStatus, err := ParseTaskStatus(status)
+	if err != nil {
+		return PutTaskStatusResponse{}, err
+	}
+
+	if task.Status == newStatus {
 		return PutTaskStatusResponse{}, ErrTaskStatusAlreadyUpdated
 	}
 
@@ -89,18 +122,12 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			return PutTaskStatusResponse{}, err
 		}
 
-		// TODO: baseと分けるべき？？
-		if task.TaskID == "" || baseTask.BaseID == "" {
+		if baseTask.BaseID == "" {
 			return PutTaskStatusResponse{}, ErrTaskNotFound
 		}
 
-		// タスクの有効期間 検証
-		now := time.Now()
-		if now.Before(task.StartTime) || now.After(task.EndTime) {
-			return PutTaskStatusResponse{}, ErrTaskExpired
-		}
-
-		err = repositories.UpdateTaskStatus(taskID, TaskStatusComplete)
+		// TODO:渡してる数字がintなのは許して後修正する
+		err = repositories.UpdateTaskStatus(taskID, 2)
 		if err != nil {
 			return PutTaskStatusResponse{}, err
 		}
@@ -148,8 +175,8 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 				}
 			}
 
-			if len(friends) > 0 {
-				targetUserID = candidates[rand.Intn(len(friends))]
+			if len(candidates) > 0 {
+				targetUserID = candidates[rand.Intn(len(candidates))]
 			}
 		}
 
@@ -160,6 +187,10 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 				return PutTaskStatusResponse{}, err
 			}
 		}
+
+		// TODO: 汚した相手に通知処理
+
+		// TODO: レスキュー処理
 
 		return PutTaskStatusResponse{
 			IsChanged:    true,
@@ -172,7 +203,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			return PutTaskStatusResponse{}, ErrInvalidRequest
 		}
 
-		err = repositories.UpdateTaskStatus(taskID, TaskStatusPending)
+		err = repositories.UpdateTaskStatus(taskID, 1)
 		if err != nil {
 			return PutTaskStatusResponse{}, err
 		}
@@ -191,7 +222,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 
 	case TaskStatusIncomplete:
 		// 未完了処理
-		if string(task.Status) != TaskStatusPending {
+		if task.Status != models.TaskStatusPending {
 			return PutTaskStatusResponse{}, ErrTaskStatusAlreadyUpdated
 		}
 
@@ -199,13 +230,13 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			return PutTaskStatusResponse{}, ErrInvalidRequest
 		}
 
-		err = repositories.UpdateTaskStatus(taskID, TaskStatusIncomplete)
+		err = repositories.UpdateTaskStatus(taskID, 0)
 		if err != nil {
 			return PutTaskStatusResponse{}, err
 		}
 
 		err = repositories.UpdateTaskMessage(taskID, message)
-				if err != nil {
+		if err != nil {
 			return PutTaskStatusResponse{}, err
 		}
 
