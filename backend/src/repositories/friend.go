@@ -57,6 +57,14 @@ func GetFriends(userID string) ([]*models.User, error) {
 	return users, err
 }
 
+// GetHelpTargets は userID が help_targets に登録しているレスキュー対象を返す
+func GetHelpTargets(userID string) ([]*models.HelpTargets, error) {
+	var targets []*models.HelpTargets
+	// user_id が一致するレコードを全件取得
+	err := models.DB.Where("user_id = ?", userID).Find(&targets).Error
+	return targets, err
+}
+
 // DeleteFriendShip は取得済みのフレンドシップレコードを削除する
 func DeleteFriendShip(fs *models.FriendShips) error {
 	// 複合主キーを明示的に指定して物理削除する
