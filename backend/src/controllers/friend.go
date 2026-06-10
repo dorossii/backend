@@ -146,7 +146,7 @@ func PostAttackerSettingsHandler(ctx echo.Context) error {
 
 // レスキューする人の設定
 func PostRescuerSettingsHandler(ctx echo.Context) error {
-	id := ctx.Request().Header.Get("UserID")
+	userID := ctx.Get("UserID").(string)
 
 	var req struct {
 		TargetUsers []string `json:"TargetUsers"`
@@ -158,7 +158,7 @@ func PostRescuerSettingsHandler(ctx echo.Context) error {
 	}
 	
 	// ターゲットユーザーの設定
-	err := services.PostRescuerSettings(id, req.TargetUsers)
+	err := services.PostRescuerSettings(userID, req.TargetUsers)
 
 	if err != nil {
 		logger.PrintErr("PostRescuerSettingsHandler", err)
