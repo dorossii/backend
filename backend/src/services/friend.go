@@ -214,7 +214,6 @@ func PostRescuerSettings(userID string, targetUsers []string) error {
 			logger.PrintErr("get friend ship", err)
 			return err
 		}
-
 		if friendShip == nil {
 			logger.PrintErr("friend not found", errors.New("friend not found: "+targetUser))
 			return ErrFriendNotFound
