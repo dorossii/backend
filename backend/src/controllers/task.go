@@ -35,8 +35,8 @@ type PostTaskTauntMessageRequest struct {
 
 // 煽りメッセージの登録
 func PostTauntMessageHandler(ctx echo.Context) error {
-	userId := ctx.Request().Header.Get("UserID")
-
+	userId := ctx.Get("UserID").(string)
+	
 	var req PostTaskTauntMessageRequest
 
 	if err := ctx.Bind(&req); err != nil {
