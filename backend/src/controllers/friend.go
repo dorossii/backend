@@ -143,3 +143,38 @@ func PostAttackerSettingsHandler(ctx echo.Context) error {
 	})
 
 }
+
+// レスキューする人の設定
+func PostRescuerSettingsHandler(ctx echo.Context) error {
+	userID := ctx.Get("UserID").(string)
+
+	var req struct {
+		TargetUsers []string `json:"TargetUsers"`
+	}
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid request",
+		})
+	}
+	
+	// ターゲットユーザーの設定
+	err := services.PostRescuerSettings(userID, req.TargetUsers)
+
+	if err != nil {
+		logger.PrintErr("PostRescuerSettingsHandler", err)
+		
+		if errors.Is(err, services.ErrFriendNotFound) {
+			return ctx.JSON(http.StatusForbidden, echo.Map{
+				"error": "friend not found",
+			})
+		}
+
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "internal server error",
+		})
+	}
+	
+	return ctx.JSON(http.StatusOK, echo.Map{
+		"message": "success",
+	})
+}

@@ -62,3 +62,4 @@ func DeleteFriendShip(fs *models.FriendShips) error {
 	// 複合主キーを明示的に指定して物理削除する
 	return models.DB.Where("user_id = ? AND friend_id = ?", fs.UserID, fs.FriendID).Delete(&models.FriendShips{}).Error
 }
+

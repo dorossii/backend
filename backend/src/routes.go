@@ -83,7 +83,7 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		friend.PUT("/attack", controllers.PostAttackerSettingsHandler)
 
 		// レスキューする人の設定
-		friend.POST("/rescue", TempController)
+		friend.POST("/rescue", controllers.PostRescuerSettingsHandler)
 	}
 
 	// noticeグループ
