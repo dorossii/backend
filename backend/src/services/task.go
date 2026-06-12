@@ -114,6 +114,9 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		return PutTaskStatusResponse{}, ErrTaskStatusAlreadyUpdated
 	}
 
+	// レスキューに設定されているユーザーの保存
+	var rescueUserIDs []models.HelpTargets
+
 	switch status {
 	case TaskStatusComplete:
 		// 完了処理
@@ -155,7 +158,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			}
 
 			// レスキュー対象除外
-			rescueUserIDs, err := repositories.GetRescueUserIDs(userID)
+			rescueUserIDs, err = repositories.GetRescueUserIDs(userID)
 			if err != nil {
 				return PutTaskStatusResponse{}, err
 			}
@@ -189,8 +192,33 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		}
 
 		// TODO: 汚した相手に通知処理
+		notice := &models.TrashNotice{
+			NoticeID:   uuid.NewString(),
+			SenderID:   userID,
+			ReceiverID: targetUserID,
+			Count:      baseTask.DifficultyLevel, // 難易度=ゴミの数
+			CreatedAt:  time.Time{},
+		}
+
+		err = repositories.CreateTrashNotice(notice)
+		if err != nil {
+			return PutTaskStatusResponse{}, err
+		}
 
 		// TODO: レスキュー処理
+		if len(rescueUserIDs) > 0 {
+			reduceAmount := difficultyLevel / len(rescueUserIDs)
+
+			for _, rescueUser := range rescueUserIDs {
+				err := repositories.UpdateDirtLevel(
+					rescueUser.FriendID,
+					-reduceAmount,
+				)
+				if err != nil {
+					return PutTaskStatusResponse{}, err
+				}
+			}
+		}
 
 		return PutTaskStatusResponse{
 			IsChanged:    true,
