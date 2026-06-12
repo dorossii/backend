@@ -8,14 +8,14 @@ import (
 )
 
 func RegisterUser(ctx echo.Context) error {
-	userID := ctx.Get("UserID").(string)
+	userId := ctx.Get("UserID").(string)
 
 	var req services.RegisterUserRequest
 	if err := ctx.Bind(&req); err != nil {
 		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
 	}
 
-	res, err := services.RegisterUser(userID, req)
+	res, err := services.RegisterUser(userId, req)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}

@@ -35,7 +35,7 @@ type PostTaskTauntMessageRequest struct {
 
 // 煽りメッセージの登録
 func PostTauntMessageHandler(ctx echo.Context) error {
-	id := ctx.Request().Header.Get("UserID")
+	userId := ctx.Request().Header.Get("UserID")
 
 	var req PostTaskTauntMessageRequest
 
@@ -45,7 +45,7 @@ func PostTauntMessageHandler(ctx echo.Context) error {
 		})
 	}
 
-	err := services.PostTaskTauntMessage(id, req.FriendID, req.Message)
+	err := services.PostTaskTauntMessage(userId, req.FriendID, req.Message)
 	if err != nil {
 		if errors.Is(err, services.ErrFriendNotFound) {
 			return ctx.JSON(http.StatusForbidden, echo.Map{

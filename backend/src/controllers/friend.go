@@ -12,14 +12,14 @@ import (
 )
 
 func SendFriendRequest(ctx echo.Context) error {
-	userID := ctx.Get("UserID").(string)
+	userId := ctx.Get("UserID").(string)
 
 	friendID := ctx.Request().Header.Get("InviteID")
 	if friendID == "" {
 		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "InviteID header is required"})
 	}
 
-	err := services.SendFriendRequest(userID, friendID)
+	err := services.SendFriendRequest(userId, friendID)
 	if err != nil {
 		if errors.Is(err, services.ErrAlreadySent) || errors.Is(err, services.ErrAlreadyReceived) {
 			return ctx.JSON(http.StatusConflict, map[string]string{"error": err.Error()})
@@ -31,7 +31,7 @@ func SendFriendRequest(ctx echo.Context) error {
 }
 
 func AcceptFriendRequest(ctx echo.Context) error {
-	userID := ctx.Get("UserID").(string)
+	userId := ctx.Get("UserID").(string)
 
 	// 相手のIDを取得
 	friendID := ctx.Request().Header.Get("FriendId")
@@ -39,7 +39,7 @@ func AcceptFriendRequest(ctx echo.Context) error {
 		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "FriendId header is required"})
 	}
 
-	err := services.AcceptFriendRequest(userID, friendID)
+	err := services.AcceptFriendRequest(userId, friendID)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -49,10 +49,10 @@ func AcceptFriendRequest(ctx echo.Context) error {
 
 // 送られてきたフレンドリクエストを取得する関数
 func GetReceivedFriendRequests(ctx echo.Context) error {
-	userID := ctx.Get("UserID").(string)
+	userId := ctx.Get("UserID").(string)
 
 	// 相手のIDを取得
-	res, err := services.GetFriendRequests(userID)
+	res, err := services.GetFriendRequests(userId)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -64,10 +64,10 @@ func GetReceivedFriendRequests(ctx echo.Context) error {
 // GetFriends は承認済みフレンドの一覧を返すハンドラ
 func GetFriends(ctx echo.Context) error {
 	// JWTミドルウェアで検証済みのユーザーIDを取得
-	userID := ctx.Get("UserID").(string)
+	userId := ctx.Get("UserID").(string)
 
 	// フレンド一覧を取得
-	friends, err := services.GetFriends(userID)
+	friends, err := services.GetFriends(userId)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
@@ -78,7 +78,7 @@ func GetFriends(ctx echo.Context) error {
 // DeleteFriend はフレンド関係を削除するハンドラ
 func DeleteFriend(ctx echo.Context) error {
 	// JWTミドルウェアで検証済みのユーザーIDを取得
-	userID := ctx.Get("UserID").(string)
+	userId := ctx.Get("UserID").(string)
 
 	// パスパラメータから削除対象のフレンドIDを取得
 	friendID := ctx.Param("id")
@@ -87,7 +87,7 @@ func DeleteFriend(ctx echo.Context) error {
 	}
 
 	// フレンド関係を削除
-	err := services.DeleteFriend(userID, friendID)
+	err := services.DeleteFriend(userId, friendID)
 	if err != nil {
 		if errors.Is(err, services.ErrFriendShipNotFound) || errors.Is(err, services.ErrFriendShipNotAccepted) {
 			return ctx.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
@@ -99,9 +99,9 @@ func DeleteFriend(ctx echo.Context) error {
 }
 
 func GetInviteURL(ctx echo.Context) error {
-	userID := ctx.Get("UserID").(string)
+	userId := ctx.Get("UserID").(string)
 
-	url := fmt.Sprintf("%s/app/friend/invite?inviteid=%s", inviteBaseURL, userID)
+	url := fmt.Sprintf("%s/app/friend/invite?inviteid=%s", inviteBaseURL, userId)
 
 	return ctx.JSON(http.StatusOK, map[string]string{
 		"URL": url,
@@ -114,7 +114,7 @@ type PostAttackerSettingsRequest struct {
 
 // 嫌がらせする人の設定
 func PostAttackerSettingsHandler(ctx echo.Context) error {
-	id := ctx.Request().Header.Get("UserID")
+	userId := ctx.Get("UserID").(string)
 
 	var req PostAttackerSettingsRequest
 	if err := ctx.Bind(&req); err != nil {
@@ -123,7 +123,7 @@ func PostAttackerSettingsHandler(ctx echo.Context) error {
 		})
 	}
 
-	err := services.PostAttackerSettings(id, req.TargetUser)
+	err := services.PostAttackerSettings(userId, req.TargetUser)
 	if err != nil {
 		logger.PrintErr("PostAttackerSettingsHandler", err)
 
@@ -146,7 +146,7 @@ func PostAttackerSettingsHandler(ctx echo.Context) error {
 
 // レスキューする人の設定
 func PostRescuerSettingsHandler(ctx echo.Context) error {
-	userID := ctx.Get("UserID").(string)
+	userId := ctx.Get("UserID").(string)
 
 	var req struct {
 		TargetUsers []string `json:"TargetUsers"`
@@ -158,7 +158,7 @@ func PostRescuerSettingsHandler(ctx echo.Context) error {
 	}
 	
 	// ターゲットユーザーの設定
-	err := services.PostRescuerSettings(userID, req.TargetUsers)
+	err := services.PostRescuerSettings(userId, req.TargetUsers)
 
 	if err != nil {
 		logger.PrintErr("PostRescuerSettingsHandler", err)
