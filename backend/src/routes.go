@@ -51,7 +51,7 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 			task.GET("/:id/image", TempController)
 
 			// タスクのステータス更新
-			task.PUT("/:task_id", TempController)
+			task.PUT("/:task_id", controllers.PutTaskStatusHandler)
 		}
 
 		// タスク複数完了
