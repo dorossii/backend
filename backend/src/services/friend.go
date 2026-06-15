@@ -192,8 +192,13 @@ func PostRescuerSettings(userID string, targetUsers []string) error {
 	}
 	// 空文字ならレスキューなし設定
 	if len(targetUsers) == 0 {
-
-		err = repositories.UpdateRescuerSettings(tx, userID, "")
+		targets := []models.HelpTargets{
+			{
+				UserID:   userID,
+				FriendID: "",
+			},
+		}
+		err = repositories.UpdateRescuerSettings(tx, targets)
 
 		if err != nil {
 			logger.PrintErr("update rescuer settings", err)
@@ -230,17 +235,28 @@ func PostRescuerSettings(userID string, targetUsers []string) error {
 			return ErrFriendNotFound
 		}
 		//現在の嫌がらせユーザーとレスキューが一致した場合フラグをtrueにする
-		if setUser == targetUser {
+		if setUser != "" && setUser == targetUser {
 			isAttackerSet = true
 		}
-
-		// レスキュー設定を保存
-		err = repositories.UpdateRescuerSettings(tx, userID, targetUser)
-		if err != nil {
-			logger.PrintErr("update rescuer settings", err)
-			return err
-		}
 	}
+
+	// レスキュー設定をまとめる
+	var helptargets []models.HelpTargets
+
+    for _, targetUser := range targetUsers {
+        helptargets = append(helptargets, models.HelpTargets{
+            UserID:   userID,
+            FriendID: targetUser,
+        })
+    }
+
+	// レスキュー設定をまとめて保存
+	err = repositories.UpdateRescuerSettings(tx, helptargets)
+	if err != nil {
+		logger.PrintErr("update rescuer settings", err)
+		return err
+	}
+
 
 	// 一致フラグがtrueの時
 	if isAttackerSet {
