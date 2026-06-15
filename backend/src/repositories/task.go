@@ -42,3 +42,13 @@ func GetUserTasks(userID string) ([]TaskResponse, error) {
 
     return results, err
 }
+
+func GetTask(taskID string)(models.Task, error) {
+    var task models.Task
+    err := models.DB.Model(&models.Task{}).Where("task_id = ?", taskID).Find(&task).Error
+    return task, err
+}
+
+func UpdateTaskImage(taskID string, imageID string) error {
+    return models.DB.Model(&models.Task{}).Where("task_id = ?", taskID).Update("image_id", imageID).Error
+}
