@@ -4,7 +4,7 @@ import (
 	"backend/models"
 	"testing"
 	"time"
-) 
+)
 
 func TestTask(t *testing.T) {
 	// INSERT
@@ -71,7 +71,7 @@ func TestTask(t *testing.T) {
 		)
 	}
 
-	if result.RequireImage != false {
+	if result.RequireImage != true {
 		t.Fatalf(
 			"unexpected RequireImage: %v",
 			result.RequireImage,
