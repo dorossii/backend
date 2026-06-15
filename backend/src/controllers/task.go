@@ -66,7 +66,7 @@ func PostTauntMessageHandler(ctx echo.Context) error {
 // タスク写真アップロード
 func PostUploadImageHandler(ctx echo.Context) error {
 
-	id := ctx.Request().Header.Get("UserID")
+	userId := ctx.Get("UserID").(string)
 	taskID := ctx.Param("id")
 
 	fileHeader, err := ctx.FormFile("image")
@@ -84,7 +84,7 @@ func PostUploadImageHandler(ctx echo.Context) error {
 		})
 	}
 
-	err = services.PostUploadImage(id, taskID, fileHeader)
+	err = services.PostUploadImage(userId, taskID, fileHeader)
 	if err != nil {
 
 		switch {
