@@ -222,7 +222,13 @@ func PostRescuerSettings(userID string, targetUsers []string) error {
 
 	//テーブルに各々保存
 	for _, targetUser := range targetUsers {
-		err := repositories.UpdateRescuerSettings(tx, userID, targetUser)
+		setUser, err := repositories.GetAttackerSettings(targetUser)
+		if setUser != "" {
+			// いやがらせに設定されていた場合、ランダム設定に更新
+			repositories.UpdateAttackerSettingsTx(tx, userID, "")
+		}
+		// レスキュー設定を保存
+		err = repositories.UpdateRescuerSettings(tx, userID, targetUser)
 		if err != nil {
 			logger.PrintErr("update rescuer settings", err)
 			return err
