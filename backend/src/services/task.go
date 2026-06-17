@@ -183,26 +183,28 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			}
 		}
 
+		var notice *models.TrashNotice
+		
 		// 相手の汚さの更新
 		if targetUserID != "" {
 			err = repositories.UpdateDirtLevel(targetUserID, difficultyLevel)
 			if err != nil {
 				return PutTaskStatusResponse{}, err
 			}
-		}
 
-		// TODO: 汚した相手に通知処理
-		notice := &models.TrashNotice{
-			NoticeID:   uuid.NewString(),
-			SenderID:   userID,
-			ReceiverID: targetUserID,
-			Count:      baseTask.DifficultyLevel, // 難易度=ゴミの数
-			CreatedAt:  time.Time{},
-		}
+			// 汚した相手に通知処理
+			notice = &models.TrashNotice{
+				NoticeID:   uuid.NewString(),
+				SenderID:   userID,
+				ReceiverID: targetUserID,
+				Count:      baseTask.DifficultyLevel, // 難易度=ゴミの数
+				CreatedAt:  time.Time{},
+			}
 
-		err = repositories.CreateTrashNotice(notice)
-		if err != nil {
-			return PutTaskStatusResponse{}, err
+			err = repositories.CreateTrashNotice(notice)
+			if err != nil {
+				return PutTaskStatusResponse{}, err
+			}
 		}
 
 		// TODO: レスキュー処理
