@@ -3,6 +3,8 @@ package repositories
 import (
 	"backend/models"
 	"time"
+
+    "gorm.io/gorm"
 )
 
 type TaskResponse struct {
@@ -55,10 +57,10 @@ func GetBaseTask(baseID string)(models.BaseTask, error) {
     return basetask, err
 }
 
-func UpdateTaskStatus(taskID string, status int) error {
-    return models.DB.Model(&models.Task{}).Where("task_id = ?", taskID).Update("status", status).Error
+func UpdateTaskStatus(db *gorm.DB, taskID string, status int) error {
+    return db.Model(&models.Task{}).Where("task_id = ?", taskID).Update("status", status).Error
 }
 
-func UpdateTaskMessage(taskID string, message string) error {
-    return models.DB.Model(&models.Task{}).Where("task_id = ?", taskID).Update("message", message).Error
+func UpdateTaskMessage(tx *gorm.DB, taskID string, message string) error {
+    return tx.Model(&models.Task{}).Where("task_id = ?", taskID).Update("message", message).Error
 }

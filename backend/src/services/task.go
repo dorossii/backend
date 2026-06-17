@@ -130,7 +130,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		}
 
 		// TODO:渡してる数字がintなのは許して後修正する
-		err = repositories.UpdateTaskStatus(taskID, 2)
+		err = repositories.UpdateTaskStatus(models.DB, taskID, 2)
 		if err != nil {
 			return PutTaskStatusResponse{}, err
 		}
@@ -239,7 +239,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			return PutTaskStatusResponse{}, ErrInvalidRequest
 		}
 
-		err = repositories.UpdateTaskStatus(taskID, 1)
+		err = repositories.UpdateTaskStatus(models.DB, taskID, 1)
 		if err != nil {
 			return PutTaskStatusResponse{}, err
 		}
@@ -257,6 +257,9 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		}, nil
 
 	case TaskStatusIncomplete:
+		tx := models.DB.Begin()
+		defer tx.Rollback()
+
 		// 未完了処理
 		if task.Status != models.TaskStatusPending {
 			return PutTaskStatusResponse{}, ErrTaskStatusAlreadyUpdated
@@ -266,13 +269,18 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			return PutTaskStatusResponse{}, ErrInvalidRequest
 		}
 
-		err = repositories.UpdateTaskStatus(taskID, 0)
+		err = repositories.UpdateTaskStatus(tx, taskID, 0)
 		if err != nil {
 			return PutTaskStatusResponse{}, err
 		}
 
-		err = repositories.UpdateTaskMessage(taskID, message)
+		err = repositories.UpdateTaskMessage(tx, taskID, message)
 		if err != nil {
+			return PutTaskStatusResponse{}, err
+		}
+
+		if err := tx.Commit().Error; err != nil {
+			logger.PrintErr("commit transaction", err)
 			return PutTaskStatusResponse{}, err
 		}
 
