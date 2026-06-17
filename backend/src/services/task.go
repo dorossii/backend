@@ -217,10 +217,19 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		}
 
 		// TODO: レスキュー処理
-		if len(rescueUserIDs) > 0 {
-			reduceAmount := difficultyLevel / len(rescueUserIDs)
+		var validRescueUsers []models.HelpTargets
 
-			for _, rescueUser := range rescueUserIDs {
+		// 空レコードをユーザとして判定しないように
+		for _, rescueUser := range rescueUserIDs {
+			if rescueUser.FriendID != "" {
+				validRescueUsers = append(validRescueUsers, rescueUser)
+			}
+		}
+
+		if len(validRescueUsers) > 0 {
+			reduceAmount := difficultyLevel / len(validRescueUsers)
+
+			for _, rescueUser := range validRescueUsers {
 				err := repositories.UpdateDirtLevel(
 					tx,
 					rescueUser.FriendID,
