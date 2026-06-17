@@ -72,7 +72,7 @@ type PutTaskStatusRequest struct {
 // タスクステータス更新(完了•未完了)
 func PutTaskStatusHandler(ctx echo.Context) error {
 	//ヘッダーからユーザーIDを取得
-	id := ctx.Request().Header.Get("UserID")
+	userId := ctx.Get("UserID").(string)
 	taskID := ctx.Param("id")
 
 	var req PutTaskStatusRequest
@@ -83,7 +83,7 @@ func PutTaskStatusHandler(ctx echo.Context) error {
 	}
 
 	// TODO:ここのエラーハンドリング修正の余地あり（ケースで分けてるのが多すぎる気がするから）
-	result, err := services.PutTaskStatus(id, taskID, req.Status, req.Message)
+	result, err := services.PutTaskStatus(userId, taskID, req.Status, req.Message)
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrInvalidTaskStatus):
