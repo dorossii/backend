@@ -57,6 +57,20 @@ func GetFriends(userID string) ([]*models.User, error) {
 	return users, err
 }
 
+// GetFriendsExcludeRescue はレスキュー設定済みユーザーを除外したフレンド一覧を返す
+func GetFriendsExcludeRescue(userID string) ([]*models.User, error) {
+	var users []*models.User
+	err := models.DB.
+		Joins("JOIN friend_ships ON (friend_ships.friend_id = users.user_id OR friend_ships.user_id = users.user_id)").
+		Where("(friend_ships.user_id = ? OR friend_ships.friend_id = ?) AND friend_ships.status = ? AND users.user_id != ?",
+			userID, userID, models.FriendStatusAccepted, userID).
+		Where("users.user_id NOT IN (?)",
+			models.DB.Table("help_targets").Select("friend_id").Where("user_id = ? AND friend_id != ''", userID),
+		).
+		Find(&users).Error
+	return users, err
+}
+
 // DeleteFriendShip は取得済みのフレンドシップレコードを削除する
 func DeleteFriendShip(fs *models.FriendShips) error {
 	// 複合主キーを明示的に指定して物理削除する
