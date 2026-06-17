@@ -2,6 +2,8 @@ package repositories
 
 import (
 	"backend/models"
+
+	"gorm.io/gorm"
 )
 
 func CreateUser(user *models.User) error {
@@ -26,10 +28,10 @@ func UpdateAttackerSettings(userID string, targetUser string) error {
 	return nil
 }
 
-func UpdateDirtLevel(userID string, diff int) error {
+func UpdateDirtLevel(tx *gorm.DB, userID string, diff int) error {
 	var user models.User
 
-	err := models.DB.Model(&models.User{}).First(&user, "user_id = ?", userID).Error
+	err := tx.Model(&models.User{}).First(&user, "user_id = ?", userID).Error
 	if err != nil {
 		return err
 	}
@@ -45,6 +47,6 @@ func UpdateDirtLevel(userID string, diff int) error {
 		newDirt = 700
 	}
 
-	return models.DB.Model(&models.User{}).Where("user_id = ?", userID).Update("dirt_level", newDirt).Error
+	return tx.Model(&models.User{}).Where("user_id = ?", userID).Update("dirt_level", newDirt).Error
 }
 

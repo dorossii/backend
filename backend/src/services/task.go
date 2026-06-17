@@ -119,6 +119,9 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 
 	switch status {
 	case TaskStatusComplete:
+		tx := models.DB.Begin()
+		defer tx.Rollback()
+
 		// 完了処理
 		baseTask, err := repositories.GetBaseTask(task.BaseID)
 		if err != nil {
@@ -130,7 +133,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		}
 
 		// TODO:渡してる数字がintなのは許して後修正する
-		err = repositories.UpdateTaskStatus(models.DB, taskID, 2)
+		err = repositories.UpdateTaskStatus(tx, taskID, 2)
 		if err != nil {
 			return PutTaskStatusResponse{}, err
 		}
@@ -143,7 +146,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		difficultyLevel := baseTask.DifficultyLevel * GarbagePower // 汚さ数値の計算
 
 		// 自分の汚さの更新
-		err = repositories.UpdateDirtLevel(userID, -difficultyLevel)
+		err = repositories.UpdateDirtLevel(tx, userID, -difficultyLevel)
 		if err != nil {
 			return PutTaskStatusResponse{}, err
 		}
@@ -193,7 +196,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 
 		// 相手の汚さの更新
 		if targetUserID != "" {
-			err = repositories.UpdateDirtLevel(targetUserID, difficultyLevel)
+			err = repositories.UpdateDirtLevel(tx, targetUserID, difficultyLevel)
 			if err != nil {
 				return PutTaskStatusResponse{}, err
 			}
@@ -207,7 +210,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 				CreatedAt:  time.Time{},
 			}
 
-			err = repositories.CreateTrashNotice(notice)
+			err = repositories.CreateTrashNotice(tx, notice)
 			if err != nil {
 				return PutTaskStatusResponse{}, err
 			}
@@ -219,6 +222,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 
 			for _, rescueUser := range rescueUserIDs {
 				err := repositories.UpdateDirtLevel(
+					tx,
 					rescueUser.FriendID,
 					-reduceAmount,
 				)
@@ -226,6 +230,11 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 					return PutTaskStatusResponse{}, err
 				}
 			}
+		}
+
+		if err := tx.Commit().Error; err != nil {
+			logger.PrintErr("commit transaction", err)
+			return PutTaskStatusResponse{}, err
 		}
 
 		return PutTaskStatusResponse{
