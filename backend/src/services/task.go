@@ -151,23 +151,29 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		// 嫌がらせ相手の選出
 		targetUserID := user.TargetUser
 
+		// レスキュー対象除外
+		rescueUserIDs, err = repositories.GetRescueUserIDs(userID)
+		if err != nil {
+			return PutTaskStatusResponse{}, err
+		}
+
+		rescueMap := make(map[string]bool)
+
+		for _, id := range rescueUserIDs {
+			rescueMap[id.FriendID] = true
+		}
+
+		if targetUserID != "" {
+			// 指定ターゲットがレスキュー対象なら再抽選
+			if rescueMap[targetUserID] {
+				targetUserID = ""
+			}
+		}
+
 		if targetUserID == "" {
 			friends, err := repositories.GetFriends(userID)
 			if err != nil {
 				return PutTaskStatusResponse{}, err
-			}
-
-			// レスキュー対象除外
-			rescueUserIDs, err = repositories.GetRescueUserIDs(userID)
-			if err != nil {
-				return PutTaskStatusResponse{}, err
-			}
-
-			rescueMap := make(map[string]bool)
-
-			// 検索しやすい形(Map)に変換
-			for _, id := range rescueUserIDs {
-				rescueMap[id.FriendID] = true
 			}
 
 			var candidates []string
@@ -184,7 +190,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		}
 
 		var notice *models.TrashNotice
-		
+
 		// 相手の汚さの更新
 		if targetUserID != "" {
 			err = repositories.UpdateDirtLevel(targetUserID, difficultyLevel)
