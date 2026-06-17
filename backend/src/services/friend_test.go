@@ -682,8 +682,7 @@ func TestPostRescuerSettings_FriendNotFound(t *testing.T) {
 func TestGetFriends_ExcludeRescueTargets(t *testing.T) {
 	truncateFriendShips(t)
 	truncateHelpTargets(t)
-	TestRegisterUser(t)
-	createUser(t, "user-003", "Carol", "bird", "#0000ff")
+	TestRegisterUser(t) // user-001, user-002, user-003 を作成
 
 	// user-001 <-> user-002, user-001 <-> user-003 を承認済みにする
 	if err := services.SendFriendRequest("user-001", "user-002"); err != nil {
