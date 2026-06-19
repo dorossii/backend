@@ -125,10 +125,15 @@ func PostUploadImage(userID string, taskID string, fileHeader *multipart.FileHea
 	if err != nil {
 		return err
 	}
-	defer dst.Close()
 
 	written, err := io.Copy(dst, src)
 	if err != nil {
+		dst.Close()
+		os.Remove(dstPath)
+		return err
+	}
+
+	if err := dst.Close(); err != nil {
 		os.Remove(dstPath)
 		return err
 	}
