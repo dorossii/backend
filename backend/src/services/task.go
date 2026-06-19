@@ -304,9 +304,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		return PutTaskStatusResponse{
 			IsChanged: true,
 		}, nil
-
-	default:
-		return PutTaskStatusResponse{},
-			ErrInvalidTaskStatus
 	}
+	
+	return PutTaskStatusResponse{}, nil
 }
