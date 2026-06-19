@@ -65,7 +65,7 @@ func GetFriendsExcludeRescue(userID string) ([]*models.User, error) {
 		Where("(friend_ships.user_id = ? OR friend_ships.friend_id = ?) AND friend_ships.status = ? AND users.user_id != ?",
 			userID, userID, models.FriendStatusAccepted, userID).
 		Where("users.user_id NOT IN (?)",
-			models.DB.Table("help_targets").Select("friend_id").Where("user_id = ? AND friend_id != ''", userID),
+			models.DB.Model(&models.HelpTargets{}).Select("friend_id").Where("user_id = ? AND friend_id != ''", userID),
 		).
 		Find(&users).Error
 	return users, err
