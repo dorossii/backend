@@ -140,7 +140,7 @@ func PostUploadImage(userID string, taskID string, fileHeader *multipart.FileHea
 
 	if written == 0 {
 		os.Remove(dstPath)
-		return errors.New("空ファイルです")
+		return ErrEmptyImageFile
 	}
 
 	// DB更新
