@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 var (
@@ -92,11 +93,10 @@ func ParseTaskStatus(s string) (models.TaskStatus, error) {
 func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusResponse, error) {
 	task, err := repositories.GetTask(taskID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return PutTaskStatusResponse{}, ErrTaskNotFound
+		}
 		return PutTaskStatusResponse{}, err
-	}
-
-	if task.TaskID == "" {
-		return PutTaskStatusResponse{}, ErrTaskNotFound
 	}
 
 	// タスクの有効期間 検証
@@ -125,11 +125,10 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		// 完了処理
 		baseTask, err := repositories.GetBaseTask(task.BaseID)
 		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return PutTaskStatusResponse{}, ErrTaskNotFound
+			}
 			return PutTaskStatusResponse{}, err
-		}
-
-		if baseTask.BaseID == "" {
-			return PutTaskStatusResponse{}, ErrTaskNotFound
 		}
 
 		// TODO:渡してる数字がintなのは許して後修正する
