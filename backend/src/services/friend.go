@@ -109,15 +109,15 @@ type RescueFriendInfo struct {
 	IsRescued  bool   `json:"isrescued"`
 }
 
-// GetRescueFriends は汚さレベル401以上の承認済みフレンドをレスキュー状態付きで返す
+// GetRescueFriends は指定された汚さレベル以上の承認済みフレンドをレスキュー状態付きで返す
 func GetRescueFriends(userID string) ([]RescueFriendInfo, error) {
-	// ① 汚さレベルが閾値以上の承認済みフレンドを取得
+	// 汚さレベルが閾値以上の承認済みフレンドを取得
 	users, err := repositories.GetFriendsWithDirtLevel(userID, RescueDirtLevelThreshold)
 	if err != nil {
 		return nil, err
 	}
 
-	// ② 自分が help_targets に登録しているレスキュー対象を取得（IsRescued の判定に使用）
+	// 自分が help_targets に登録しているレスキュー対象を取得（IsRescued の判定に使用）
 	targets, err := repositories.GetHelpTargets(userID)
 	if err != nil {
 		return nil, err
