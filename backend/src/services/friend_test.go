@@ -550,13 +550,6 @@ func TestDeleteFriend_NotAccepted(t *testing.T) {
 	}
 }
 
-func truncateHelpTargets(t *testing.T) {
-	t.Helper()
-	if err := models.DB.Exec("TRUNCATE TABLE help_targets").Error; err != nil {
-		t.Fatal(err)
-	}
-}
-
 func seedHelpTarget(t *testing.T, userID, friendID string) {
 	t.Helper()
 	if err := models.DB.Create(&models.HelpTargets{UserID: userID, FriendID: friendID}).Error; err != nil {
