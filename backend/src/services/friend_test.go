@@ -5,6 +5,7 @@ import (
 	"backend/repositories"
 	"backend/services"
 	"errors"
+	"log"
 	"testing"
 	"time"
 )
@@ -884,6 +885,62 @@ func TestPostRescuerSettings_FriendNotFoundOneOfTwo(t *testing.T) {
 		t.Fatalf(
 			"unexpected target user: %s",
 			setting.FriendID,
+		)
+	}
+}
+
+// レスキュー設定(エラー系:嫌がらせのターゲットがレスキューのターゲットに設定されている場合)
+func TestPostRescuerSettings_AttackerIsRescuer(t *testing.T) {
+	truncateFriendShips(t)
+	truncateHelpTargets(t)
+
+	TestRegisterUser(t)
+	seedFriend(t)
+
+	// 嫌がらせのターゲットを user-002 に設定
+	err := services.PostAttackerSettings("user-001", "user-002")
+	if err != nil {
+		t.Fatalf("PostAttackerSettings failed: %v", err)
+	}
+
+	// レスキューのターゲットに user-002 を設定しようとする（テーブルの嫌がらせ要素は空白に変更される想定）
+	err = services.PostRescuerSettings("user-001", []string{"user-002"})
+	if err != nil {
+		t.Fatalf("PostRescuerSettings failed: %v", err)
+	}
+	// レスキュー設定が保存されていることを確認
+	var setting models.HelpTargets
+
+	err = models.DB.
+		First(&setting, "user_id = ?", "user-001").
+		Error
+
+	if err != nil {
+		t.Fatalf("record not found: %v", err)
+	}
+
+	if setting.FriendID != "user-002" {
+		t.Fatalf(
+			"unexpected target user: %s",
+			setting.FriendID,
+		)
+	}
+
+	// 嫌がらせのターゲットが空白に変更されていることを確認
+	var user models.User
+
+	err = models.DB.
+		First(&user, "user_id = ?", "user-001").
+		Error
+
+	if err != nil {
+		t.Fatalf("record not found: %v", err)
+	}
+	log.Print(user)
+	if user.TargetUser != "" {
+		t.Fatalf(
+			"expected empty target user, got: %s",
+			user.TargetUser,
 		)
 	}
 }
