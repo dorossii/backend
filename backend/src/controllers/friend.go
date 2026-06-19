@@ -75,6 +75,21 @@ func GetFriends(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, map[string]interface{}{"friends": friends})
 }
 
+// GetRescueFriends は承認済みフレンドの一覧をレスキュー状態付きで返すハンドラ
+func GetRescueFriends(ctx echo.Context) error {
+	// JWT ミドルウェアで検証済みのユーザー ID を取得
+	userID := ctx.Get("UserID").(string)
+
+	// フレンド一覧をレスキュー状態付きで取得
+	friends, err := services.GetRescueFriends(userID)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	// トップレベル配列として返す
+	return ctx.JSON(http.StatusOK, friends)
+}
+
 // DeleteFriend はフレンド関係を削除するハンドラ
 func DeleteFriend(ctx echo.Context) error {
 	// JWTミドルウェアで検証済みのユーザーIDを取得

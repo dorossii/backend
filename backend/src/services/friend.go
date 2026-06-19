@@ -98,6 +98,53 @@ func GetFriends(userID string) ([]FriendInfo, error) {
 	return friends, nil
 }
 
+// レスキュー対象とみなす汚さレベルの閾値
+const RescueDirtLevelThreshold = 401
+
+type RescueFriendInfo struct {
+	UserID     string `json:"user_id"`
+	Name       string `json:"name"`
+	Icon       string `json:"icon"`
+	Background string `json:"background"`
+	IsRescued  bool   `json:"isrescued"`
+}
+
+// GetRescueFriends は指定された汚さレベル以上の承認済みフレンドをレスキュー状態付きで返す
+func GetRescueFriends(userID string) ([]RescueFriendInfo, error) {
+	// 汚さレベルが閾値以上の承認済みフレンドを取得
+	users, err := repositories.GetFriendsWithDirtLevel(userID, RescueDirtLevelThreshold)
+	if err != nil {
+		return nil, err
+	}
+
+	// 自分が help_targets に登録しているレスキュー対象を取得（IsRescued の判定に使用）
+	targets, err := repositories.GetHelpTargets(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// O(1) で検索できるよう FriendID の Set を作成
+	rescuedSet := make(map[string]struct{}, len(targets))
+	for _, t := range targets {
+		rescuedSet[t.FriendID] = struct{}{}
+	}
+
+	// フレンド一覧と Set をマージして isrescued を付与
+	result := make([]RescueFriendInfo, 0, len(users))
+	for _, u := range users {
+		// Set に存在すれば true、なければ false
+		_, isRescued := rescuedSet[u.UserID]
+		result = append(result, RescueFriendInfo{
+			UserID:     u.UserID,
+			Name:       u.UserName,
+			Icon:       u.Icon,
+			Background: u.BgColor,
+			IsRescued:  isRescued,
+		})
+	}
+	return result, nil
+}
+
 var (
 	ErrFriendShipNotFound   = errors.New("フレンド関係が存在しません")
 	ErrFriendShipNotAccepted = errors.New("承認済みのフレンド関係ではありません")
