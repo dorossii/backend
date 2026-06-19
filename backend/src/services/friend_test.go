@@ -25,7 +25,12 @@ func truncateUsers(t *testing.T) {
 
 func createUser(t *testing.T, userID, name, icon, bgColor string) {
 	t.Helper()
-	u := &models.User{UserID: userID, UserName: name, Icon: icon, BgColor: bgColor, BirthDate: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)}
+	createUserWithDirt(t, userID, name, icon, bgColor, 0)
+}
+
+func createUserWithDirt(t *testing.T, userID, name, icon, bgColor string, dirtLevel int) {
+	t.Helper()
+	u := &models.User{UserID: userID, UserName: name, Icon: icon, BgColor: bgColor, DirtLevel: dirtLevel, BirthDate: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)}
 	if err := models.DB.Create(u).Error; err != nil {
 		t.Fatalf("createUser failed: %v", err)
 	}
@@ -561,14 +566,14 @@ func TestGetRescueFriends_Empty(t *testing.T) {
 	}
 }
 
-// help_targets なし → isrescued: false
+// 汚さレベル401以上かつ help_targets なし → isrescued: false
 func TestGetRescueFriends_IsRescuedFalse(t *testing.T) {
 	truncateFriendShips(t)
 	truncateUsers(t)
 	truncateHelpTargets(t)
 
 	createUser(t, "user-001", "Alice", "cat", "#ff0000")
-	createUser(t, "user-002", "Bob", "dog", "#00ff00")
+	createUserWithDirt(t, "user-002", "Bob", "dog", "#00ff00", services.RescueDirtLevelThreshold)
 
 	if err := services.SendFriendRequest("user-001", "user-002"); err != nil {
 		t.Fatal(err)
@@ -589,14 +594,14 @@ func TestGetRescueFriends_IsRescuedFalse(t *testing.T) {
 	}
 }
 
-// help_targets あり → isrescued: true
+// 汚さレベル401以上かつ help_targets あり → isrescued: true
 func TestGetRescueFriends_IsRescuedTrue(t *testing.T) {
 	truncateFriendShips(t)
 	truncateUsers(t)
 	truncateHelpTargets(t)
 
 	createUser(t, "user-001", "Alice", "cat", "#ff0000")
-	createUser(t, "user-002", "Bob", "dog", "#00ff00")
+	createUserWithDirt(t, "user-002", "Bob", "dog", "#00ff00", services.RescueDirtLevelThreshold)
 
 	if err := services.SendFriendRequest("user-001", "user-002"); err != nil {
 		t.Fatal(err)
@@ -618,18 +623,21 @@ func TestGetRescueFriends_IsRescuedTrue(t *testing.T) {
 	}
 }
 
-// フレンド3人、1人だけ help_targets に登録 → 各自の isrescued が正しい
+// フレンド3人全員DirtLevel401以上、1人だけ help_targets に登録 → 各自の isrescued が正しい
+// また DirtLevel400以下のフレンドは一覧に含まれない
 func TestGetRescueFriends_Mixed(t *testing.T) {
 	truncateFriendShips(t)
 	truncateUsers(t)
 	truncateHelpTargets(t)
 
 	createUser(t, "user-001", "Alice", "cat", "#ff0000")
-	createUser(t, "user-002", "Bob", "dog", "#00ff00")
-	createUser(t, "user-003", "Carol", "bird", "#0000ff")
-	createUser(t, "user-004", "Dave", "fish", "#ffff00")
+	// user-002〜004: 閾値以上 / user-005: 閾値未満
+	createUserWithDirt(t, "user-002", "Bob", "dog", "#00ff00", services.RescueDirtLevelThreshold)
+	createUserWithDirt(t, "user-003", "Carol", "bird", "#0000ff", services.RescueDirtLevelThreshold)
+	createUserWithDirt(t, "user-004", "Dave", "fish", "#ffff00", services.RescueDirtLevelThreshold)
+	createUserWithDirt(t, "user-005", "Eve", "panda", "#ffffff", services.RescueDirtLevelThreshold-1)
 
-	for _, fid := range []string{"user-002", "user-003", "user-004"} {
+	for _, fid := range []string{"user-002", "user-003", "user-004", "user-005"} {
 		if err := services.SendFriendRequest("user-001", fid); err != nil {
 			t.Fatal(err)
 		}
@@ -643,6 +651,7 @@ func TestGetRescueFriends_Mixed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetRescueFriends failed: %v", err)
 	}
+	// user-005 は DirtLevel が閾値未満なので含まれない
 	if len(result) != 3 {
 		t.Fatalf("expected 3 friends, got %d", len(result))
 	}
@@ -657,6 +666,9 @@ func TestGetRescueFriends_Mixed(t *testing.T) {
 	if statusMap["user-003"] || statusMap["user-004"] {
 		t.Error("user-003 and user-004 should be isrescued=false")
 	}
+	if _, found := statusMap["user-005"]; found {
+		t.Error("user-005 (DirtLevel below threshold) should not appear in result")
+	}
 }
 
 // pending フレンドは一覧に含まれない
@@ -666,7 +678,7 @@ func TestGetRescueFriends_ExcludesPending(t *testing.T) {
 	truncateHelpTargets(t)
 
 	createUser(t, "user-001", "Alice", "cat", "#ff0000")
-	createUser(t, "user-002", "Bob", "dog", "#00ff00")
+	createUserWithDirt(t, "user-002", "Bob", "dog", "#00ff00", services.RescueDirtLevelThreshold)
 
 	if err := services.SendFriendRequest("user-001", "user-002"); err != nil {
 		t.Fatal(err)

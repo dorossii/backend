@@ -57,6 +57,17 @@ func GetFriends(userID string) ([]*models.User, error) {
 	return users, err
 }
 
+// GetFriendsWithDirtLevel は userID の承認済みフレンドのうち DirtLevel が minDirt 以上の User 一覧を返す
+func GetFriendsWithDirtLevel(userID string, minDirt int) ([]*models.User, error) {
+	var users []*models.User
+	err := models.DB.
+		Joins("JOIN friend_ships ON (friend_ships.friend_id = users.user_id OR friend_ships.user_id = users.user_id)").
+		Where("(friend_ships.user_id = ? OR friend_ships.friend_id = ?) AND friend_ships.status = ? AND users.user_id != ? AND users.dirt_level >= ?",
+			userID, userID, models.FriendStatusAccepted, userID, minDirt).
+		Find(&users).Error
+	return users, err
+}
+
 // GetHelpTargets は userID が help_targets に登録しているレスキュー対象を返す
 func GetHelpTargets(userID string) ([]*models.HelpTargets, error) {
 	var targets []*models.HelpTargets
