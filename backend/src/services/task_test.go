@@ -198,6 +198,20 @@ func TestPostTaskTauntMessage_FriendNotFound(t *testing.T) {
 	}
 }
 
+// 画像アップロードテスト用初期化
+func setupUploadTest(t *testing.T) {
+	t.Helper()
+
+	t.Setenv(
+		"TASK_IMAGE_DIR",
+		"../assets/test-images",
+	)
+
+	if err := services.InitTaskImageService(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // 画像アップロードテストに利用するヘルパー
 func createFileHeader(t *testing.T, path string) *multipart.FileHeader {
 	t.Helper()
@@ -248,6 +262,8 @@ func createFileHeader(t *testing.T, path string) *multipart.FileHeader {
 
 // 画像アップロード(正常系)
 func TestPostUploadImage_JPEG(t *testing.T) {
+	setupUploadTest(t)
+
 	TestRegisterUser(t)
 
 	task := models.Task{
@@ -293,6 +309,8 @@ func TestPostUploadImage_JPEG(t *testing.T) {
 
 // 画像アップロード(画像差し替え)
 func TestPostUploadImage_ReplaceImage(t *testing.T) {
+	setupUploadTest(t)
+
 	TestRegisterUser(t)
 
 	task := models.Task{
@@ -309,7 +327,10 @@ func TestPostUploadImage_ReplaceImage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fileHeader := createFileHeader(t, "../assets/test-images/test.jpg")
+	fileHeader := createFileHeader(
+		t,
+		"../assets/test-images/test.jpg",
+	)
 
 	err := services.PostUploadImage(
 		"user-001",
@@ -340,7 +361,12 @@ func TestPostUploadImage_ReplaceImage(t *testing.T) {
 
 // 画像アップロード(異常系：タスク不在)
 func TestPostUploadImage_TaskNotFound(t *testing.T) {
-	fileHeader := createFileHeader(t, "../assets/test-images/test.jpg")
+	setupUploadTest(t)
+
+	fileHeader := createFileHeader(
+		t,
+		"../assets/test-images/test.jpg",
+	)
 
 	err := services.PostUploadImage(
 		"user-001",
@@ -352,13 +378,15 @@ func TestPostUploadImage_TaskNotFound(t *testing.T) {
 		t.Fatal("expected error but got nil")
 	}
 
-	if err != services.ErrTaskNotFound {
+		if err != services.ErrTaskNotFound {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
 // 画像アップロード(異常系：他人のタスク)
 func TestPostUploadImage_PermissionDenied(t *testing.T) {
+	setupUploadTest(t)
+
 	TestRegisterUser(t)
 
 	task := models.Task{
@@ -369,11 +397,15 @@ func TestPostUploadImage_PermissionDenied(t *testing.T) {
 		StartTime: time.Now().Add(-1 * time.Hour),
 		EndTime:   time.Now().Add(1 * time.Hour),
 	}
+
 	if err := models.DB.Create(&task).Error; err != nil {
 		t.Fatal(err)
 	}
 
-	fileHeader := createFileHeader(t, "../assets/test-images/test.jpg")
+	fileHeader := createFileHeader(
+		t,
+		"../assets/test-images/test.jpg",
+	)
 
 	err := services.PostUploadImage(
 		"user-001",
@@ -392,6 +424,8 @@ func TestPostUploadImage_PermissionDenied(t *testing.T) {
 
 // 画像アップロード(異常系：JPEG/PNG以外)
 func TestPostUploadImage_UnsupportedImageType(t *testing.T) {
+	setupUploadTest(t)
+
 	TestRegisterUser(t)
 
 	task := models.Task{
@@ -407,7 +441,10 @@ func TestPostUploadImage_UnsupportedImageType(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fileHeader := createFileHeader(t, "../assets/test-images/test.txt")
+	fileHeader := createFileHeader(
+		t,
+		"../assets/test-images/test.txt",
+	)
 
 	err := services.PostUploadImage(
 		"user-001",
@@ -418,7 +455,6 @@ func TestPostUploadImage_UnsupportedImageType(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error but got nil")
 	}
-
 	if err != services.ErrUnsupportedImageType {
 		t.Fatalf("unexpected error: %v", err)
 	}

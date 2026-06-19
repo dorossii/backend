@@ -129,6 +129,7 @@ def main():
 SessionSecret = "{session_secret_key}"
 GRPC_SERVER = auth:9000
 DATABASE_DSN = "main:main@tcp(db:3306)/maindb?charset=utf8mb4&parseTime=True&loc=Local"
+TASK_IMAGE_DIR= "/app/assets/task-images"
 """
 
     # app.env ファイルを生成

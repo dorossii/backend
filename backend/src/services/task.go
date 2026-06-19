@@ -14,10 +14,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 var (
-	ErrTaskNotFound             = errors.New("タスクが見つかりません")
+	ErrTaskNotFound = errors.New("タスクが見つかりません")
 
 	ErrTaskPermissionDenied = errors.New("このタスクを操作する権限がありません")
 	ErrUnsupportedImageType = errors.New("対応していない画像形式です")
@@ -67,11 +68,11 @@ func PostTaskTauntMessage(userId string, friendId string, msg string) error {
 func PostUploadImage(userID string, taskID string, fileHeader *multipart.FileHeader) error {
 	task, err := repositories.GetTask(taskID)
 	if err != nil {
-		return err
-	}
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrTaskNotFound
+		}
 
-	if task.TaskID == "" {
-		return ErrTaskNotFound
+		return err
 	}
 
 	// 自分のタスクか確認
@@ -80,12 +81,6 @@ func PostUploadImage(userID string, taskID string, fileHeader *multipart.FileHea
 	}
 
 	oldImageID := task.ImageID
-
-	uploadDir := "../assets/task-images"
-
-	if err := os.MkdirAll(uploadDir, 0755); err != nil {
-		return err
-	}
 
 	src, err := fileHeader.Open()
 	if err != nil {
