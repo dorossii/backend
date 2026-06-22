@@ -18,6 +18,7 @@ var (
 	ErrTaskExpired              = errors.New("タスクの有効期間外です")
 	ErrTaskNotFound             = errors.New("タスクが見つかりません")
 	ErrTaskStatusAlreadyUpdated = errors.New("すでにタスクステータスが更新されています")
+	ErrTaskPermissionDenied     = errors.New("タスクを操作する権限がありません")
 )
 
 func GetTasks(userID string) ([]repositories.TaskResponse, error) {
@@ -97,6 +98,27 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			return PutTaskStatusResponse{}, ErrTaskNotFound
 		}
 		return PutTaskStatusResponse{}, err
+	}
+
+	// タスク所有者 or フレンドのみ操作可能
+	if task.UserID != userID {
+		friendShip, err := repositories.GetFriendShipAny(
+			userID,
+			task.UserID,
+		)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return PutTaskStatusResponse{},
+					ErrTaskPermissionDenied
+			}
+
+			return PutTaskStatusResponse{}, err
+		}
+
+		if friendShip.UserID == "" {
+			return PutTaskStatusResponse{},
+				ErrTaskPermissionDenied
+		}
 	}
 
 	// タスクの有効期間 検証
@@ -305,6 +327,6 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			IsChanged: true,
 		}, nil
 	}
-	
+
 	return PutTaskStatusResponse{}, nil
 }

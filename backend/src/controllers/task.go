@@ -37,7 +37,7 @@ type PostTaskTauntMessageRequest struct {
 // 煽りメッセージの登録
 func PostTauntMessageHandler(ctx echo.Context) error {
 	userId := ctx.Get("UserID").(string)
-	
+
 	var req PostTaskTauntMessageRequest
 
 	if err := ctx.Bind(&req); err != nil {
@@ -109,6 +109,11 @@ func PutTaskStatusHandler(ctx echo.Context) error {
 		case errors.Is(err, services.ErrTaskStatusAlreadyUpdated):
 			return ctx.JSON(http.StatusConflict, echo.Map{
 				"error": "task status already updated",
+			})
+
+		case errors.Is(err, services.ErrTaskPermissionDenied):
+			return ctx.JSON(http.StatusForbidden, echo.Map{
+				"error": "forbidden",
 			})
 
 		default:
