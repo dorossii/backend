@@ -57,7 +57,7 @@ func GetBaseTask(baseID string)(models.BaseTask, error) {
     return basetask, err
 }
 
-func UpdateTaskStatus(db *gorm.DB, taskID string, status int) error {
+func UpdateTaskStatus(db *gorm.DB, taskID string, status models.TaskStatus) error {
     return db.Model(&models.Task{}).Where("task_id = ?", taskID).Update("status", status).Error
 }
 

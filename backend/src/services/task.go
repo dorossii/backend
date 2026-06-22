@@ -161,7 +161,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		}
 
 		// TODO:渡してる数字がintなのは許して後修正する
-		err = repositories.UpdateTaskStatus(tx, taskID, 2)
+		err = repositories.UpdateTaskStatus(tx, taskID, models.TaskStatusCompleted)
 		if err != nil {
 			return PutTaskStatusResponse{}, err
 		}
@@ -285,7 +285,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			return PutTaskStatusResponse{}, ErrInvalidRequest
 		}
 
-		err = repositories.UpdateTaskStatus(models.DB, taskID, 1)
+		err = repositories.UpdateTaskStatus(models.DB, taskID, models.TaskStatusPending)
 		if err != nil {
 			return PutTaskStatusResponse{}, err
 		}
@@ -315,7 +315,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			return PutTaskStatusResponse{}, ErrInvalidRequest
 		}
 
-		err = repositories.UpdateTaskStatus(tx, taskID, 0)
+		err = repositories.UpdateTaskStatus(tx, taskID, models.TaskStatusImcomplete)
 		if err != nil {
 			return PutTaskStatusResponse{}, err
 		}
