@@ -28,6 +28,29 @@ func UpdateAttackerSettings(userID string, targetUser string) error {
 	return nil
 }
 
+func UpdateAttackerSettingsTx(tx *gorm.DB, userID string, targetUser string) error {
+	err := tx.
+		Model(&models.User{}).
+		Where("user_id = ?", userID).
+		Update("target_user", targetUser).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetAttackerSettings は userID の target_user を返す	
+func GetAttackerSettings(userID string) (string, error) {
+	var user models.User
+	err := models.DB.Select("target_user").First(&user, "user_id = ?", userID).Error
+	if err != nil {
+		return "", err
+	}
+	
+	return user.TargetUser, nil
+}
+
 func UpdateDirtLevel(tx *gorm.DB, userID string, diff int) error {
 	var user models.User
 
