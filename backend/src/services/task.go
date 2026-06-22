@@ -220,8 +220,6 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			}
 		}
 
-		var notice *models.TrashNotice
-
 		// 相手の汚さの更新
 		if targetUserID != "" {
 			err = repositories.UpdateDirtLevel(tx, targetUserID, difficultyLevel)
@@ -230,7 +228,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			}
 
 			// 汚した相手に通知処理
-			notice = &models.TrashNotice{
+			notice := &models.TrashNotice{
 				NoticeID:   uuid.NewString(),
 				SenderID:   userID,
 				ReceiverID: targetUserID,
