@@ -51,3 +51,25 @@ func GetAttackerSettings(userID string) (string, error) {
 	return user.TargetUser, nil
 }
 
+func UpdateDirtLevel(tx *gorm.DB, userID string, diff int) error {
+	var user models.User
+
+	err := tx.Model(&models.User{}).First(&user, "user_id = ?", userID).Error
+	if err != nil {
+		return err
+	}
+
+	// 計算後の値が0以下700以上ならぱわーでねじ曲げる
+	newDirt := user.DirtLevel + diff
+
+	if newDirt < 0 {
+		newDirt = 0
+	}
+
+	if newDirt > 700 {
+		newDirt = 700
+	}
+
+	return tx.Model(&models.User{}).Where("user_id = ?", userID).Update("dirt_level", newDirt).Error
+}
+

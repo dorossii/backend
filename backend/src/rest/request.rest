@@ -1,5 +1,4 @@
 @base_url = https://localhost:8947/app
-@task_id = ""
 @friend_id = ""
 
 ###
@@ -90,16 +89,19 @@ GET {{base_url}}/user/task/{{task_id}}/image HTTP/1.1
 
 
 
-@status = incomplete
-# @status = pending
+# @status = incomplete
+@status = pending
 # @status = complete
 
+@task_id = task-
 ### タスクステータス更新
 PUT {{base_url}}/user/task/{{task_id}} HTTP/1.1
 Content-Type: application/json
+UserID: user-001
 
 {
-	"status" :"{{status}}"
+	"status" :"{{status}}",
+  "message":""
 }
 
 

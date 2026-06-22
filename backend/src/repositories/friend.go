@@ -96,3 +96,13 @@ func DeleteFriendShip(fs *models.FriendShips) error {
 	return models.DB.Where("user_id = ? AND friend_id = ?", fs.UserID, fs.FriendID).Delete(&models.FriendShips{}).Error
 }
 
+func GetRescueUserIDs(userID string)([]models.HelpTargets, error) {
+var helpTargets []models.HelpTargets
+
+	err := models.DB.Where("user_id = ?", userID).Find(&helpTargets).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return helpTargets, nil
+}
