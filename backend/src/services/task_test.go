@@ -4,8 +4,15 @@ import (
 	"backend/batch"
 	"backend/models"
 	"backend/services"
+	"bytes"
 	"fmt"
+	"io"
 	"log"
+	"mime/multipart"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -188,5 +195,267 @@ func TestPostTaskTauntMessage_FriendNotFound(t *testing.T) {
 			"unexpected error: %v",
 			err,
 		)
+	}
+}
+
+// 画像アップロードテスト用初期化
+func setupUploadTest(t *testing.T) {
+	t.Helper()
+
+	t.Setenv(
+		"TASK_IMAGE_DIR",
+		"../assets/test-images",
+	)
+
+	if err := services.InitTaskImageService(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// 画像アップロードテストに利用するヘルパー
+func createFileHeader(t *testing.T, path string) *multipart.FileHeader {
+	t.Helper()
+
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	part, err := writer.CreateFormFile(
+		"file",
+		filepath.Base(path),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := io.Copy(part, file); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/upload",
+		body,
+	)
+
+	req.Header.Set(
+		"Content-Type",
+		writer.FormDataContentType(),
+	)
+
+	_, fileHeader, err := req.FormFile("file")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return fileHeader
+}
+
+// 画像アップロード(正常系)
+func TestPostUploadImage_JPEG(t *testing.T) {
+	setupUploadTest(t)
+
+	TestRegisterUser(t)
+
+	task := models.Task{
+		TaskID:    "task-jpeg",
+		BaseID:    "base-001",
+		UserID:    "user-001",
+		Status:    models.TaskStatusImcomplete,
+		StartTime: time.Now().Add(-1 * time.Hour),
+		EndTime:   time.Now().Add(1 * time.Hour),
+	}
+
+	if err := models.DB.Create(&task).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	fileHeader := createFileHeader(
+		t,
+		"../assets/test-images/test.jpg",
+	)
+
+	err := services.PostUploadImage(
+		"user-001",
+		"task-jpeg",
+		fileHeader,
+	)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var updatedTask models.Task
+
+	if err := models.DB.
+		First(&updatedTask, "task_id = ?", "task-jpeg").
+		Error; err != nil {
+		t.Fatal(err)
+	}
+
+	if updatedTask.ImageID == "" {
+		t.Fatal("expected image id")
+	}
+}
+
+// 画像アップロード(画像差し替え)
+func TestPostUploadImage_ReplaceImage(t *testing.T) {
+	setupUploadTest(t)
+
+	TestRegisterUser(t)
+
+	task := models.Task{
+		TaskID:    "task-replace-image",
+		BaseID:    "base-001",
+		UserID:    "user-001",
+		ImageID:   "old-image.jpg",
+		Status:    models.TaskStatusImcomplete,
+		StartTime: time.Now().Add(-1 * time.Hour),
+		EndTime:   time.Now().Add(1 * time.Hour),
+	}
+
+	if err := models.DB.Create(&task).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	fileHeader := createFileHeader(
+		t,
+		"../assets/test-images/test.jpg",
+	)
+
+	err := services.PostUploadImage(
+		"user-001",
+		"task-replace-image",
+		fileHeader,
+	)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var updatedTask models.Task
+
+	if err := models.DB.
+		First(&updatedTask, "task_id = ?", "task-replace-image").
+		Error; err != nil {
+		t.Fatal(err)
+	}
+
+	if updatedTask.ImageID == "" {
+		t.Fatal("expected image id")
+	}
+
+	if updatedTask.ImageID == "old-image.jpg" {
+		t.Fatal("image was not replaced")
+	}
+}
+
+// 画像アップロード(異常系：タスク不在)
+func TestPostUploadImage_TaskNotFound(t *testing.T) {
+	setupUploadTest(t)
+
+	fileHeader := createFileHeader(
+		t,
+		"../assets/test-images/test.jpg",
+	)
+
+	err := services.PostUploadImage(
+		"user-001",
+		"not-found-task",
+		fileHeader,
+	)
+
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+
+		if err != services.ErrTaskNotFound {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// 画像アップロード(異常系：他人のタスク)
+func TestPostUploadImage_PermissionDenied(t *testing.T) {
+	setupUploadTest(t)
+
+	TestRegisterUser(t)
+
+	task := models.Task{
+		TaskID:    "task-other-user",
+		BaseID:    "base-001",
+		UserID:    "user-999",
+		Status:    models.TaskStatusImcomplete,
+		StartTime: time.Now().Add(-1 * time.Hour),
+		EndTime:   time.Now().Add(1 * time.Hour),
+	}
+
+	if err := models.DB.Create(&task).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	fileHeader := createFileHeader(
+		t,
+		"../assets/test-images/test.jpg",
+	)
+
+	err := services.PostUploadImage(
+		"user-001",
+		"task-other-user",
+		fileHeader,
+	)
+
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+
+	if err != services.ErrTaskPermissionDenied {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// 画像アップロード(異常系：JPEG/PNG以外)
+func TestPostUploadImage_UnsupportedImageType(t *testing.T) {
+	setupUploadTest(t)
+
+	TestRegisterUser(t)
+
+	task := models.Task{
+		TaskID:    "task-invalid-image",
+		BaseID:    "base-001",
+		UserID:    "user-001",
+		Status:    models.TaskStatusImcomplete,
+		StartTime: time.Now().Add(-1 * time.Hour),
+		EndTime:   time.Now().Add(1 * time.Hour),
+	}
+
+	if err := models.DB.Create(&task).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	fileHeader := createFileHeader(
+		t,
+		"../assets/test-images/test.txt",
+	)
+
+	err := services.PostUploadImage(
+		"user-001",
+		"task-invalid-image",
+		fileHeader,
+	)
+
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+	if err != services.ErrUnsupportedImageType {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

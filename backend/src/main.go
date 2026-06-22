@@ -4,6 +4,9 @@ import (
 	"backend/batch"
 	"backend/middlewares"
 	"backend/models"
+	"backend/services"
+	"log"
+
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -13,6 +16,11 @@ import (
 func main() {
 	// モデル初期化
 	models.Init()
+
+	// task画像サービス初期化
+	if err := services.InitTaskImageService(); err != nil {
+		log.Fatal(err)
+	}
 
 	// バッチ処理開始
 	batch.Run()
