@@ -133,7 +133,14 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 	}
 
 	if task.Status == newStatus {
-		return PutTaskStatusResponse{}, ErrTaskStatusAlreadyUpdated
+		return PutTaskStatusResponse{},
+			ErrTaskStatusAlreadyUpdated
+	}
+
+	if task.Status == models.TaskStatusCompleted &&
+		newStatus != models.TaskStatusCompleted {
+		return PutTaskStatusResponse{},
+			ErrTaskStatusAlreadyUpdated
 	}
 
 	// レスキューに設定されているユーザーの保存
