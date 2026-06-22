@@ -65,9 +65,10 @@ func GetReceivedFriendRequests(ctx echo.Context) error {
 func GetFriends(ctx echo.Context) error {
 	// JWTミドルウェアで検証済みのユーザーIDを取得
 	userId := ctx.Get("UserID").(string)
+	excludeRescue := ctx.QueryParam("excludeRescue") == "true"
 
 	// フレンド一覧を取得
-	friends, err := services.GetFriends(userId)
+	friends, err := services.GetFriends(userId, excludeRescue)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}

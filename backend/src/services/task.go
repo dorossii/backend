@@ -4,8 +4,14 @@ import (
 	"backend/logger"
 	"backend/models"
 	"backend/repositories"
+	"net/http"
+
 	"errors"
+	"io"
 	"math/rand"
+	"mime/multipart"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,12 +19,15 @@ import (
 )
 
 var (
+	ErrTaskNotFound             = errors.New("タスクが見つかりません")
 	ErrInvalidTaskStatus        = errors.New("無効なタスクステータスです")
 	ErrInvalidRequest           = errors.New("必要なパラメータの不足です")
 	ErrTaskExpired              = errors.New("タスクの有効期間外です")
-	ErrTaskNotFound             = errors.New("タスクが見つかりません")
 	ErrTaskStatusAlreadyUpdated = errors.New("すでにタスクステータスが更新されています")
 	ErrTaskPermissionDenied     = errors.New("タスクを操作する権限がありません")
+
+	ErrUnsupportedImageType = errors.New("対応していない画像形式です")
+	ErrEmptyImageFile       = errors.New("空の画像ファイルです")
 )
 
 func GetTasks(userID string) ([]repositories.TaskResponse, error) {
@@ -59,6 +68,107 @@ func PostTaskTauntMessage(userId string, friendId string, msg string) error {
 
 	return nil
 }
+
+// タスク写真アップロード
+func PostUploadImage(userID string, taskID string, fileHeader *multipart.FileHeader) error {
+	task, err := repositories.GetTask(taskID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrTaskNotFound
+		}
+
+		return err
+	}
+
+	// 自分のタスクか確認
+	if task.UserID != userID {
+		return ErrTaskPermissionDenied
+	}
+
+	oldImageID := task.ImageID
+
+	src, err := fileHeader.Open()
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	// 画像か判定
+	header := make([]byte, 512)
+	n, err := src.Read(header)
+	if err != nil && err != io.EOF {
+		return err
+	}
+
+	contentType := http.DetectContentType(header[:n])
+
+	// 画像形式判定
+	var ext string
+	switch contentType {
+	case "image/jpeg":
+		ext = ".jpg"
+	case "image/png":
+		ext = ".png"
+	default:
+		return ErrUnsupportedImageType
+	}
+
+	// 読み取り位置を先頭へ戻す
+	_, err = src.Seek(0, io.SeekStart)
+	if err != nil {
+		return err
+	}
+
+	fileName := uuid.NewString() + ext
+
+	dstPath := filepath.Join(
+		uploadDir,
+		fileName,
+	)
+
+	dst, err := os.Create(dstPath)
+	if err != nil {
+		return err
+	}
+
+	written, err := io.Copy(dst, src)
+	if err != nil {
+		dst.Close()
+		os.Remove(dstPath)
+		return err
+	}
+
+	if err := dst.Close(); err != nil {
+		os.Remove(dstPath)
+		return err
+	}
+
+	if written == 0 {
+		os.Remove(dstPath)
+		return ErrEmptyImageFile
+	}
+
+	// DB更新
+	err = repositories.UpdateTaskImage(taskID, fileName)
+	if err != nil {
+		os.Remove(dstPath)
+		return err
+	}
+
+	// 古い画像削除
+	if oldImageID != "" {
+
+		oldPath := filepath.Join(
+			uploadDir,
+			oldImageID,
+		)
+
+		_ = os.Remove(oldPath)
+	}
+
+	return nil
+}
+
 
 type PutTaskStatusResponse struct {
 	IsChanged    bool
