@@ -76,9 +76,14 @@ type FriendInfo struct {
 }
 
 // GetFriends は承認済みフレンドの情報一覧を返す
-func GetFriends(userID string) ([]FriendInfo, error) {
-	// 承認済みフレンドの User レコードを取得
-	users, err := repositories.GetFriends(userID)
+func GetFriends(userID string, excludeRescue bool) ([]FriendInfo, error) {
+	var users []*models.User
+	var err error
+	if excludeRescue {
+		users, err = repositories.GetFriendsExcludeRescue(userID)
+	} else {
+		users, err = repositories.GetFriends(userID)
+	}
 	if err != nil {
 		return nil, err
 	}
