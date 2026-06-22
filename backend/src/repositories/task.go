@@ -55,12 +55,6 @@ func UpdateTaskImage(taskID string, imageID string) error {
 	return models.DB.Model(&models.Task{}).Where("task_id = ?", taskID).Update("image_id", imageID).Error
 }
 
-func GetTask(taskID string)(models.Task, error) {
-    var task models.Task
-    err := models.DB.Model(&models.Task{}).Where("task_id = ?", taskID).First(&task).Error
-    return task, err
-}
-
 func GetBaseTask(baseID string)(models.BaseTask, error) {
     var basetask models.BaseTask
     err := models.DB.Model(&models.BaseTask{}).Where("base_id = ?", baseID).First(&basetask).Error
