@@ -36,7 +36,7 @@ type PostTaskTauntMessageRequest struct {
 // 煽りメッセージの登録
 func PostTauntMessageHandler(ctx echo.Context) error {
 	userId := ctx.Get("UserID").(string)
-	
+
 	var req PostTaskTauntMessageRequest
 
 	if err := ctx.Bind(&req); err != nil {
@@ -88,6 +88,10 @@ func PostUploadImageHandler(ctx echo.Context) error {
 	if err != nil {
 
 		switch {
+		case errors.Is(err, services.ErrTaskNotFound):
+			return ctx.JSON(http.StatusNotFound, echo.Map{
+				"error": err.Error(),
+			})
 
 		case errors.Is(err, services.ErrTaskPermissionDenied):
 			return ctx.JSON(http.StatusForbidden, echo.Map{
