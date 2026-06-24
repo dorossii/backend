@@ -377,6 +377,28 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			}
 		}
 
+		lastCompleted := user.LastTaskCompletedAt
+		now := time.Now()
+
+		diffDays := int(
+			now.Truncate(24*time.Hour).
+				Sub(lastCompleted.Truncate(24*time.Hour)).
+				Hours() / 24,
+		)
+
+		newCombo := 1
+
+		if diffDays == 0 {	// すでに今日分のコンボは加算されている
+			newCombo = user.Combo
+		} else if diffDays == 1 {		// 最終更新が昨日なのでコンボ追加
+			newCombo = user.Combo + 1
+		}
+
+		err = repositories.UpdateUserCombo(tx, userID, newCombo, now)
+		if err != nil {
+			return PutTaskStatusResponse{}, err
+		}
+
 		if err := tx.Commit().Error; err != nil {
 			logger.PrintErr("commit transaction", err)
 			return PutTaskStatusResponse{}, err
