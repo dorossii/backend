@@ -816,6 +816,65 @@ func TestPutTaskStatus_InvalidStatus(t *testing.T) {
 }
 
 
+// 画像取得(正常系: JPEG)
+func TestGetTaskImage_JPEG(t *testing.T) {
+	setupUploadTest(t)
+	TestRegisterUser(t)
+
+	task := models.Task{
+		TaskID:    "task-get-jpeg",
+		BaseID:    "base-001",
+		UserID:    "user-001",
+		Status:    models.TaskStatusPending,
+		StartTime: time.Now().Add(-1 * time.Hour),
+		EndTime:   time.Now().Add(1 * time.Hour),
+	}
+
+	if err := models.DB.Create(&task).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	fileHeader := createFileHeader(t, "../assets/test-images/test.jpg")
+	if err := services.PostUploadImage("user-001", "task-get-jpeg", fileHeader); err != nil {
+		t.Fatalf("画像アップロードに失敗: %v", err)
+	}
+
+	var updatedTask models.Task
+	if err := models.DB.First(&updatedTask, "task_id = ?", "task-get-jpeg").Error; err != nil {
+		t.Fatal(err)
+	}
+
+	// ImageID から拡張子を除いた UUID 部分を取り出す
+	imageUUID := updatedTask.ImageID[:len(updatedTask.ImageID)-len(filepath.Ext(updatedTask.ImageID))]
+
+	filePath, contentType, err := services.GetTaskImage(imageUUID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if filePath == "" {
+		t.Fatal("expected non-empty filePath")
+	}
+
+	if contentType != "image/jpeg" {
+		t.Fatalf("unexpected contentType: %s", contentType)
+	}
+}
+
+// 画像取得(異常系: 存在しない imageId)
+func TestGetTaskImage_NotFound(t *testing.T) {
+	setupUploadTest(t)
+
+	_, _, err := services.GetTaskImage("non-existent-uuid")
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+
+	if err != services.ErrTaskNotFound {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 // タスクステータス更新(同じステータスへの更新完了)
 func TestPutTaskStatus_AlreadyUpdated(t *testing.T) {
 	TestRegisterUser(t)

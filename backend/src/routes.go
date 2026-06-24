@@ -48,7 +48,7 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 			task.POST("/message", controllers.PostTauntMessageHandler)
 
 			// 写真確認
-			task.GET("/:id/image", TempController)
+			task.GET("/:imageId/image", controllers.GetTaskImageHandler)
 
 			// タスクのステータス更新
 			task.PUT("/:id", controllers.PutTaskStatusHandler)
