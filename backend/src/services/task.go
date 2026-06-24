@@ -169,7 +169,6 @@ func PostUploadImage(userID string, taskID string, fileHeader *multipart.FileHea
 	return nil
 }
 
-
 type PutTaskStatusResponse struct {
 	IsChanged    bool
 	RequireImage bool
@@ -380,17 +379,21 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		lastCompleted := user.LastTaskCompletedAt
 		now := time.Now()
 
-		diffDays := int(
-			now.Truncate(24*time.Hour).
-				Sub(lastCompleted.Truncate(24*time.Hour)).
-				Hours() / 24,
-		)
+		diffDays := -1
+
+		if lastCompleted != nil {
+			diffDays = int(
+				now.Truncate(24*time.Hour).
+					Sub(lastCompleted.Truncate(24*time.Hour)).
+					Hours() / 24,
+			)
+		}
 
 		newCombo := 1
 
-		if diffDays == 0 {	// すでに今日分のコンボは加算されている
+		if diffDays == 0 { // すでに今日分のコンボは加算されている
 			newCombo = user.Combo
-		} else if diffDays == 1 {		// 最終更新が昨日なのでコンボ追加
+		} else if diffDays == 1 { // 最終更新が昨日なのでコンボ追加
 			newCombo = user.Combo + 1
 		}
 

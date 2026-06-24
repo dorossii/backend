@@ -71,5 +71,5 @@ func UpdateTaskMessage(tx *gorm.DB, taskID string, message string) error {
 
 func UpdateUserCombo(db *gorm.DB, userID string, combo int, completedAt time.Time) error {
 	return db.Model(&models.User{}).Where("user_id = ?", userID).
-		Updates(models.User{Combo: combo, LastTaskCompletedAt: completedAt}).Error
+		Updates(models.User{Combo: combo, LastTaskCompletedAt: &completedAt}).Error
 }
