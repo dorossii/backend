@@ -3,3 +3,6 @@ config/app.env
 nginx/keys/
 openssl/jwtKeys/
 auth/icons/
+backend/src/assets/test-images/*.jpg
+backend/src/assets/test-images/*.png
+!backend/src/assets/test-images/test.jpg

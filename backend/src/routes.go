@@ -42,16 +42,16 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 			task.GET("/:id", TempController)
 
 			// タスク写真のアップロード
-			task.POST("/:id/image", TempController)
+			task.POST("/:id/image", controllers.PostUploadImageHandler)
 
 			// タスク煽りメッセージ
 			task.POST("/message", controllers.PostTauntMessageHandler)
 
 			// 写真確認
-			task.GET("/:id/image", TempController)
+			task.GET("/:imageId/image", controllers.GetTaskImageHandler)
 
 			// タスクのステータス更新
-			task.PUT("/:task_id", TempController)
+			task.PUT("/:id", controllers.PutTaskStatusHandler)
 		}
 
 		// タスク複数完了
@@ -83,7 +83,10 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		friend.PUT("/attack", controllers.PostAttackerSettingsHandler)
 
 		// レスキューする人の設定
-		friend.POST("/rescue", TempController)
+		friend.POST("/rescue", controllers.PostRescuerSettingsHandler)
+
+		// レスキューしてほしい人の一覧取得（isrescued: help_targets に登録済みなら true）
+		friend.GET("/rescue", controllers.GetRescueFriends)
 	}
 
 	// noticeグループ

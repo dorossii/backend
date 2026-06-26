@@ -4,18 +4,21 @@ import (
 	"backend/models"
 	"testing"
 	"time"
-) 
+)
 
 func TestTask(t *testing.T) {
 	// INSERT
 	tasks := []models.Task{
 		{
-			TaskID:    "task-001",
-			BaseID:    "base-001",
-			UserID:    "user-001",
-			Status:    models.TaskStatusImcomplete,
-			StartTime: time.Now(),
-			EndTime:   time.Now().Add(24 * time.Hour),
+			TaskID:       "task-001",
+			BaseID:       "base-001",
+			UserID:       "user-001",
+			Status:       models.TaskStatusImcomplete,
+			StartTime:    time.Now(),
+			EndTime:      time.Now().Add(24 * time.Hour),
+			ImageID:      "",
+			RequireImage: true,
+			Message:      "",
 		},
 		{
 			TaskID:    "task-002",
@@ -68,7 +71,7 @@ func TestTask(t *testing.T) {
 		)
 	}
 
-	if result.RequireImage != false {
+	if result.RequireImage != true {
 		t.Fatalf(
 			"unexpected RequireImage: %v",
 			result.RequireImage,
