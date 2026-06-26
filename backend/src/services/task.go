@@ -470,3 +470,22 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 
 	return PutTaskStatusResponse{}, nil
 }
+
+func GetTaskImage(imageID string) (filePath string, contentType string, err error) {
+	candidates := []struct {
+		ext         string
+		contentType string
+	}{
+		{".jpg", "image/jpeg"},
+		{".png", "image/png"},
+	}
+
+	for _, c := range candidates {
+		path := filepath.Join(uploadDir, imageID+c.ext)
+		if _, statErr := os.Stat(path); statErr == nil {
+			return path, c.contentType, nil
+		}
+	}
+
+	return "", "", ErrTaskNotFound
+}
