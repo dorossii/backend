@@ -30,7 +30,7 @@ func DeleteTaskTicker() {
 
 func DeleteTask() error {
 	//期限切れのタスクを削除する
-	if err := models.DB.Where("end_time < ?", time.Now()).Delete(&models.Task{}).Error; err != nil {
+	if err := models.DB.Where("end_time < ?", utils.NowJST()).Delete(&models.Task{}).Error; err != nil {
 		return err
 	}
 	return nil

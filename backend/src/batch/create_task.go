@@ -57,7 +57,7 @@ func CreateTask() error {
 	}
 
 	// 乱数生成器の初期化
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r := rand.New(rand.NewSource(utils.NowJST().UnixNano()))
 
 	var tasksToInsert []models.Task
 	now := utils.NowJST()

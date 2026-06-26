@@ -4,6 +4,7 @@ import (
 	"backend/batch"
 	"backend/models"
 	"backend/services"
+	"backend/utils"
 	"bytes"
 	"fmt"
 	"io"
@@ -271,8 +272,8 @@ func TestPostUploadImage_JPEG(t *testing.T) {
 		BaseID:    "base-001",
 		UserID:    "user-001",
 		Status:    models.TaskStatusImcomplete,
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -319,8 +320,8 @@ func TestPostUploadImage_ReplaceImage(t *testing.T) {
 		UserID:    "user-001",
 		ImageID:   "old-image.jpg",
 		Status:    models.TaskStatusImcomplete,
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -378,7 +379,7 @@ func TestPostUploadImage_TaskNotFound(t *testing.T) {
 		t.Fatal("expected error but got nil")
 	}
 
-		if err != services.ErrTaskNotFound {
+	if err != services.ErrTaskNotFound {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -394,8 +395,8 @@ func TestPostUploadImage_PermissionDenied(t *testing.T) {
 		BaseID:    "base-001",
 		UserID:    "user-999",
 		Status:    models.TaskStatusImcomplete,
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -433,8 +434,8 @@ func TestPostUploadImage_UnsupportedImageType(t *testing.T) {
 		BaseID:    "base-001",
 		UserID:    "user-001",
 		Status:    models.TaskStatusImcomplete,
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -460,7 +461,6 @@ func TestPostUploadImage_UnsupportedImageType(t *testing.T) {
 	}
 }
 
-
 // タスクステータス更新(完了: 正常系)
 func TestPutTaskStatus_Complete(t *testing.T) {
 	TestRegisterUser(t)
@@ -470,8 +470,8 @@ func TestPutTaskStatus_Complete(t *testing.T) {
 		BaseID:    "base-001",
 		UserID:    "user-001",
 		Status:    models.TaskStatusImcomplete,
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -538,8 +538,8 @@ func TestPutTaskStatus_Expired(t *testing.T) {
 		BaseID:    "base-001",
 		UserID:    "user-001",
 		Status:    models.TaskStatusImcomplete,
-		StartTime: time.Now().Add(-2 * time.Hour),
-		EndTime:   time.Now().Add(-1 * time.Hour), // 既に終了
+		StartTime: utils.NowJST().Add(-2 * time.Hour),
+		EndTime:   utils.NowJST().Add(-1 * time.Hour), // 既に終了
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -570,8 +570,8 @@ func TestPutTaskStatus_Pending(t *testing.T) {
 		BaseID:       "base-001",
 		UserID:       "user-001",
 		Status:       models.TaskStatusImcomplete,
-		StartTime:    time.Now().Add(-1 * time.Hour),
-		EndTime:      time.Now().Add(1 * time.Hour),
+		StartTime:    utils.NowJST().Add(-1 * time.Hour),
+		EndTime:      utils.NowJST().Add(1 * time.Hour),
 		ImageID:      "image-001",
 		RequireImage: false,
 	}
@@ -624,10 +624,10 @@ func TestPutTaskStatus_Pending_RequireImageButNoImageID(t *testing.T) {
 		BaseID:       "base-001",
 		UserID:       "user-001",
 		Status:       models.TaskStatusImcomplete,
-		StartTime:    time.Now().Add(-1 * time.Hour),
-		EndTime:      time.Now().Add(1 * time.Hour),
-		ImageID:      "",     // 画像なし
-		RequireImage: true,   // 画像必須
+		StartTime:    utils.NowJST().Add(-1 * time.Hour),
+		EndTime:      utils.NowJST().Add(1 * time.Hour),
+		ImageID:      "",   // 画像なし
+		RequireImage: true, // 画像必須
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -659,8 +659,8 @@ func TestPutTaskStatus_Incomplete(t *testing.T) {
 		BaseID:    "base-001",
 		UserID:    "user-001",
 		Status:    models.TaskStatusPending, // Pendingから差し戻し
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -716,8 +716,8 @@ func TestPutTaskStatus_Incomplete_NotPending(t *testing.T) {
 		BaseID:    "base-001",
 		UserID:    "user-001",
 		Status:    models.TaskStatusCompleted,
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -752,8 +752,8 @@ func TestPutTaskStatus_Incomplete_EmptyMessage(t *testing.T) {
 		BaseID:    "base-001",
 		UserID:    "user-001",
 		Status:    models.TaskStatusPending,
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -788,8 +788,8 @@ func TestPutTaskStatus_InvalidStatus(t *testing.T) {
 		BaseID:    "base-001",
 		UserID:    "user-001",
 		Status:    models.TaskStatusImcomplete,
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -815,7 +815,6 @@ func TestPutTaskStatus_InvalidStatus(t *testing.T) {
 	}
 }
 
-
 // 画像取得(正常系: JPEG)
 func TestGetTaskImage_JPEG(t *testing.T) {
 	setupUploadTest(t)
@@ -826,8 +825,8 @@ func TestGetTaskImage_JPEG(t *testing.T) {
 		BaseID:    "base-001",
 		UserID:    "user-001",
 		Status:    models.TaskStatusPending,
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -884,8 +883,8 @@ func TestPutTaskStatus_AlreadyUpdated(t *testing.T) {
 		BaseID:    "base-001",
 		UserID:    "user-001",
 		Status:    models.TaskStatusPending,
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {

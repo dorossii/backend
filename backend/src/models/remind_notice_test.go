@@ -2,8 +2,8 @@ package models_test
 
 import (
 	"backend/models"
+	"backend/utils"
 	"testing"
-	"time"
 )
 
 func TestRemindNotice(t *testing.T) {
@@ -14,7 +14,7 @@ func TestRemindNotice(t *testing.T) {
 			UserID:     "user-001",
 			SenderID:   "",
 			Title:      "【公式】今日のタスクを確認してください",
-			NotifiedAt: time.Now(),
+			NotifiedAt: utils.NowJST(),
 			IsRead:     false,
 		},
 		{
@@ -22,7 +22,7 @@ func TestRemindNotice(t *testing.T) {
 			UserID:     "user-001",
 			SenderID:   "user-002",
 			Title:      "【フレンド】user2があなたを応援しています",
-			NotifiedAt: time.Now(),
+			NotifiedAt: utils.NowJST(),
 			IsRead:     false,
 		},
 	}
@@ -95,4 +95,3 @@ func TestRemindNotice(t *testing.T) {
 		)
 	}
 }
-

@@ -2,6 +2,7 @@ package models_test
 
 import (
 	"backend/models"
+	"backend/utils"
 	"testing"
 	"time"
 )
@@ -14,8 +15,8 @@ func TestTask(t *testing.T) {
 			BaseID:       "base-001",
 			UserID:       "user-001",
 			Status:       models.TaskStatusImcomplete,
-			StartTime:    time.Now(),
-			EndTime:      time.Now().Add(24 * time.Hour),
+			StartTime:    utils.NowJST(),
+			EndTime:      utils.NowJST().Add(24 * time.Hour),
 			ImageID:      "",
 			RequireImage: true,
 			Message:      "",
@@ -25,16 +26,16 @@ func TestTask(t *testing.T) {
 			BaseID:    "base-002",
 			UserID:    "user-001",
 			Status:    models.TaskStatusPending,
-			StartTime: time.Now(),
-			EndTime:   time.Now().Add(24 * time.Hour),
+			StartTime: utils.NowJST(),
+			EndTime:   utils.NowJST().Add(24 * time.Hour),
 		},
 		{
 			TaskID:    "task-003",
 			BaseID:    "base-003",
 			UserID:    "user-001",
 			Status:    models.TaskStatusCompleted,
-			StartTime: time.Now(),
-			EndTime:   time.Now().Add(24 * time.Hour),
+			StartTime: utils.NowJST(),
+			EndTime:   utils.NowJST().Add(24 * time.Hour),
 		},
 	}
 

@@ -4,6 +4,7 @@ import (
 	"backend/logger"
 	"backend/models"
 	"backend/repositories"
+	"backend/utils"
 	"net/http"
 
 	"errors"
@@ -57,7 +58,7 @@ func PostTaskTauntMessage(userId string, friendId string, msg string) error {
 		UserID:     userId,
 		SenderID:   friendId,
 		Title:      msg,
-		NotifiedAt: time.Now(),
+		NotifiedAt: utils.NowJST(),
 	}
 
 	err = repositories.CreateRemindNotiec(notice)
@@ -231,7 +232,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 	}
 
 	// タスクの有効期間 検証
-	now := time.Now()
+	now := utils.NowJST()
 	if now.Before(task.StartTime) || now.After(task.EndTime) {
 		return PutTaskStatusResponse{}, ErrTaskExpired
 	}
@@ -377,7 +378,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		}
 
 		lastCompleted := user.LastTaskCompletedAt
-		now := time.Now()
+		now := utils.NowJST()
 
 		diffDays := -1
 

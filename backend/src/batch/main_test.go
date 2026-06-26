@@ -2,7 +2,9 @@ package batch_test
 
 import (
 	"backend/models"
+	"backend/utils"
 	"fmt"
+	"log"
 	"os"
 	"testing"
 	"time"
@@ -56,4 +58,9 @@ func createTestUser() error {
 		return fmt.Errorf("failed to create dummy users: %v", err)
 	}
 	return nil
+}
+
+func TestNowJST(t *testing.T) {
+	now := utils.NowJST()
+	log.Println("今の時間",now)
 }
