@@ -10,17 +10,23 @@ import (
 
 func CreateTaskTicker() {
 	go func() {
-		//24時間ごとにタスクを作成する
+		// 次の午前0時(JST)までの待機時間を計算
+		now := utils.NowJST()
+		next := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, utils.GetJST())
+		timer := time.NewTimer(next.Sub(now))
+		defer timer.Stop()
+
+		// 最初に次の午前0時まで待機
+		<-timer.C
+		CreateTask()
+
+		// 以降は24時間ごとに実行
 		ticker := time.NewTicker(24 * time.Hour)
 		defer ticker.Stop()
 
-		for {
-			select {
-			case <-ticker.C:
-				CreateTask()
-			}
+		for range ticker.C {
+			CreateTask()
 		}
-
 	}()
 }
 
@@ -54,7 +60,7 @@ func CreateTask() error {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	var tasksToInsert []models.Task
-	now := time.Now()
+	now := utils.NowJST()
 
 	// 各ユーザーに対してランダムに2つのタスクを選出してスライスに格納
 	for _, userID := range userIDs {
@@ -65,11 +71,11 @@ func CreateTask() error {
 		for i := 0; i < tasksPerUser; i++ {
 			baseTask := baseTasks[shuffledIndices[i]]
 
-			// DueTime（期限）の仕様に合わせて終了時間を計算 
+			// DueTime（期限）の仕様に合わせて終了時間を計算
 			endTime := now.Add(time.Duration(baseTask.DueTime) * 24 * time.Hour)
 
 			// UUIDを生成
-			uuid, err := utils.Genid() 
+			uuid, err := utils.Genid()
 			if err != nil {
 				return err
 			}
@@ -81,7 +87,7 @@ func CreateTask() error {
 
 			task := models.Task{
 				TaskID:       uuid,
-				BaseID:       baseTask.BaseID, 
+				BaseID:       baseTask.BaseID,
 				UserID:       userID,
 				Status:       models.TaskStatusPending,
 				StartTime:    now,
