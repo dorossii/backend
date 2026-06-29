@@ -734,7 +734,7 @@ func TestPutTaskStatus_Incomplete_NotPending(t *testing.T) {
 		t.Fatal("expected error but got nil")
 	}
 
-	if err != services.ErrTaskStatusAlreadyUpdated {
+	if err != services.ErrInvalidTaskState {
 		t.Fatalf(
 			"unexpected error: %v",
 			err,
@@ -842,7 +842,7 @@ func TestPutTaskStatus_AlreadyUpdated(t *testing.T) {
 		t.Fatal("expected error but got nil")
 	}
 
-	if err != services.ErrTaskStatusAlreadyUpdated {
+	if err != services.ErrInvalidTaskState {
 		t.Fatalf(
 			"unexpected error: %v",
 			err,

@@ -19,12 +19,12 @@ import (
 )
 
 var (
-	ErrTaskNotFound             = errors.New("タスクが見つかりません")
-	ErrInvalidTaskStatus        = errors.New("無効なタスクステータスです")
-	ErrInvalidRequest           = errors.New("必要なパラメータの不足です")
-	ErrTaskExpired              = errors.New("タスクの有効期間外です")
-	ErrTaskStatusAlreadyUpdated = errors.New("すでにタスクステータスが更新されています")
-	ErrTaskPermissionDenied     = errors.New("タスクを操作する権限がありません")
+	ErrTaskNotFound         = errors.New("タスクが見つかりません")
+	ErrInvalidTaskStatus    = errors.New("無効なタスクステータスです")
+	ErrInvalidRequest       = errors.New("必要なパラメータの不足です")
+	ErrTaskExpired          = errors.New("タスクの有効期間外です")
+	ErrInvalidTaskState     = errors.New("不正な状態遷移です")
+	ErrTaskPermissionDenied = errors.New("タスクを操作する権限がありません")
 
 	ErrUnsupportedImageType = errors.New("対応していない画像形式です")
 	ErrEmptyImageFile       = errors.New("空の画像ファイルです")
@@ -389,14 +389,6 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		defer tx.Rollback()
 
 		// 未完了処理
-		if task.Status != models.TaskStatusPending {
-			return PutTaskStatusResponse{}, ErrTaskStatusAlreadyUpdated
-		}
-
-		if message == "" {
-			return PutTaskStatusResponse{}, ErrInvalidRequest
-		}
-
 		err = repositories.UpdateTaskStatus(tx, taskID, models.TaskStatusIncomplete)
 		if err != nil {
 			return PutTaskStatusResponse{}, err
@@ -523,5 +515,5 @@ func validateTaskTransition(task models.Task, actor string, nextStatus models.Ta
 		return nil
 	}
 
-	return ErrTaskStatusAlreadyUpdated
+	return ErrInvalidTaskState
 }

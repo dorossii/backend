@@ -164,9 +164,9 @@ func PutTaskStatusHandler(ctx echo.Context) error {
 				"error": "task expired",
 			})
 
-		case errors.Is(err, services.ErrTaskStatusAlreadyUpdated):
+		case errors.Is(err, services.ErrInvalidTaskState):
 			return ctx.JSON(http.StatusConflict, echo.Map{
-				"error": "task status already updated",
+				"error": "invalid task state",
 			})
 
 		case errors.Is(err, services.ErrTaskPermissionDenied):
