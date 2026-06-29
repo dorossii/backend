@@ -186,7 +186,7 @@ const GarbagePower = 18 // TODO: 難易度1 = 18p汚さ減る
 func ParseTaskStatus(s string) (models.TaskStatus, error) {
 	switch s {
 	case TaskStatusIncomplete:
-		return models.TaskStatusImcomplete, nil
+		return models.TaskStatusIncomplete, nil
 
 	case TaskStatusPending:
 		return models.TaskStatusPending, nil
@@ -384,7 +384,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			RequireImage: false,
 		}, nil
 
-	case models.TaskStatusImcomplete:
+	case models.TaskStatusIncomplete:
 		tx := models.DB.Begin()
 		defer tx.Rollback()
 
@@ -397,7 +397,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			return PutTaskStatusResponse{}, ErrInvalidRequest
 		}
 
-		err = repositories.UpdateTaskStatus(tx, taskID, models.TaskStatusImcomplete)
+		err = repositories.UpdateTaskStatus(tx, taskID, models.TaskStatusIncomplete)
 		if err != nil {
 			return PutTaskStatusResponse{}, err
 		}
@@ -468,13 +468,13 @@ type TransitionRule struct {
 var taskTransitionRules = []TransitionRule{
 	{
 		Actor:         "owner",
-		CurrentStatus: models.TaskStatusImcomplete,
+		CurrentStatus: models.TaskStatusIncomplete,
 		NextStatus:    models.TaskStatusCompleted,
 		RequireImage:  false,
 	},
 	{
 		Actor:         "owner",
-		CurrentStatus: models.TaskStatusImcomplete,
+		CurrentStatus: models.TaskStatusIncomplete,
 		NextStatus:    models.TaskStatusPending,
 		RequireImage:  true,
 	},
@@ -486,7 +486,7 @@ var taskTransitionRules = []TransitionRule{
 	{
 		Actor:          "friend",
 		CurrentStatus:  models.TaskStatusPending,
-		NextStatus:     models.TaskStatusImcomplete,
+		NextStatus:     models.TaskStatusIncomplete,
 		RequireMessage: true,
 	},
 }
