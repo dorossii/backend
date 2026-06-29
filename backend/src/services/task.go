@@ -169,7 +169,6 @@ func PostUploadImage(userID string, taskID string, fileHeader *multipart.FileHea
 	return nil
 }
 
-
 type PutTaskStatusResponse struct {
 	IsChanged    bool
 	RequireImage bool
@@ -202,39 +201,11 @@ func ParseTaskStatus(s string) (models.TaskStatus, error) {
 
 // 　タスクステータス更新(完了•未完了)
 func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusResponse, error) {
-	task, err := repositories.GetTask(taskID)
+
+	// タスクを更新できるのか検証
+	task, err := validateTaskStatusUpdate(userID, taskID, status)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return PutTaskStatusResponse{}, ErrTaskNotFound
-		}
 		return PutTaskStatusResponse{}, err
-	}
-
-	// タスク所有者 or フレンドのみ操作可能
-	if task.UserID != userID {
-		friendShip, err := repositories.GetFriendShipAny(
-			userID,
-			task.UserID,
-		)
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return PutTaskStatusResponse{},
-					ErrTaskPermissionDenied
-			}
-
-			return PutTaskStatusResponse{}, err
-		}
-
-		if friendShip.UserID == "" {
-			return PutTaskStatusResponse{},
-				ErrTaskPermissionDenied
-		}
-	}
-
-	// タスクの有効期間 検証
-	now := time.Now()
-	if now.Before(task.StartTime) || now.After(task.EndTime) {
-		return PutTaskStatusResponse{}, ErrTaskExpired
 	}
 
 	newStatus, err := ParseTaskStatus(status)
@@ -242,22 +213,23 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		return PutTaskStatusResponse{}, err
 	}
 
-	if task.Status == newStatus {
-		return PutTaskStatusResponse{},
-			ErrTaskStatusAlreadyUpdated
+	// タスクのステータスを変更できる状況なのか検証
+	actor := "owner"
+
+	if task.UserID != userID {
+		actor = "friend"
 	}
 
-	if task.Status == models.TaskStatusCompleted &&
-		newStatus != models.TaskStatusCompleted {
-		return PutTaskStatusResponse{},
-			ErrTaskStatusAlreadyUpdated
+	err = validateTaskTransition(task, actor, newStatus, message)
+	if err != nil {
+		return PutTaskStatusResponse{}, err
 	}
 
 	// レスキューに設定されているユーザーの保存
 	var rescueUserIDs []models.HelpTargets
 
-	switch status {
-	case TaskStatusComplete:
+	switch newStatus {
+	case models.TaskStatusCompleted:
 		tx := models.DB.Begin()
 		defer tx.Rollback()
 
@@ -280,6 +252,8 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		if err != nil {
 			return PutTaskStatusResponse{}, err
 		}
+
+		// TODO: 汚さ更新につかう処理を関数化(レスキューは入れなくていい)
 
 		difficultyLevel := baseTask.DifficultyLevel * GarbagePower // 汚さ数値の計算
 
@@ -387,7 +361,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			RequireImage: false,
 		}, nil
 
-	case TaskStatusPending:
+	case models.TaskStatusPending:
 		// 認証待ち処理
 		if task.RequireImage && task.ImageID == "" {
 			return PutTaskStatusResponse{}, ErrInvalidRequest
@@ -410,7 +384,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			RequireImage: false,
 		}, nil
 
-	case TaskStatusIncomplete:
+	case models.TaskStatusImcomplete:
 		tx := models.DB.Begin()
 		defer tx.Rollback()
 
@@ -444,4 +418,110 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 	}
 
 	return PutTaskStatusResponse{}, nil
+}
+
+func validateTaskStatusUpdate(userID, taskID, status string) (models.Task, error) {
+	task, err := repositories.GetTask(taskID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return models.Task{}, ErrTaskNotFound
+		}
+		return models.Task{}, err
+	}
+
+	// タスク所有者 or フレンドのみ操作可能
+	if task.UserID != userID {
+		friendShip, err := repositories.GetFriendShipAny(userID, task.UserID)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return models.Task{},
+					ErrTaskPermissionDenied
+			}
+
+			return models.Task{}, err
+		}
+
+		if friendShip.UserID == "" {
+			return models.Task{},
+				ErrTaskPermissionDenied
+		}
+	}
+
+	// タスクの有効期間 検証
+	now := time.Now()
+	if now.Before(task.StartTime) || now.After(task.EndTime) {
+		return models.Task{}, ErrTaskExpired
+	}
+
+	return task, nil
+}
+
+type TransitionRule struct {
+	Actor          string
+	CurrentStatus  models.TaskStatus
+	NextStatus     models.TaskStatus
+	RequireImage   bool
+	RequireMessage bool
+}
+
+// 遷移ルール
+var taskTransitionRules = []TransitionRule{
+	{
+		Actor:         "owner",
+		CurrentStatus: models.TaskStatusImcomplete,
+		NextStatus:    models.TaskStatusCompleted,
+		RequireImage:  false,
+	},
+	{
+		Actor:         "owner",
+		CurrentStatus: models.TaskStatusImcomplete,
+		NextStatus:    models.TaskStatusPending,
+		RequireImage:  true,
+	},
+	{
+		Actor:         "friend",
+		CurrentStatus: models.TaskStatusPending,
+		NextStatus:    models.TaskStatusCompleted,
+	},
+	{
+		Actor:          "friend",
+		CurrentStatus:  models.TaskStatusPending,
+		NextStatus:     models.TaskStatusImcomplete,
+		RequireMessage: true,
+	},
+}
+
+func validateTaskTransition(task models.Task, actor string, nextStatus models.TaskStatus, message string) error {
+
+	for _, rule := range taskTransitionRules {
+
+		if rule.Actor != actor {
+			continue
+		}
+
+		if rule.CurrentStatus != task.Status {
+			continue
+		}
+
+		if rule.NextStatus != nextStatus {
+			continue
+		}
+
+		// 画像必須
+		if rule.RequireImage &&
+			task.RequireImage &&
+			task.ImageID == "" {
+			return ErrInvalidRequest
+		}
+
+		// メッセージ必須
+		if rule.RequireMessage &&
+			message == "" {
+			return ErrInvalidRequest
+		}
+
+		return nil
+	}
+
+	return ErrTaskStatusAlreadyUpdated
 }
