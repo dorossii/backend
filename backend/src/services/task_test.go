@@ -271,7 +271,7 @@ func TestPostUploadImage_JPEG(t *testing.T) {
 		TaskID:    "task-jpeg",
 		BaseID:    "base-001",
 		UserID:    "user-001",
-		Status:    models.TaskStatusImcomplete,
+		Status:    models.TaskStatusIncomplete,
 		StartTime: utils.NowJST().Add(-1 * time.Hour),
 		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
@@ -319,7 +319,7 @@ func TestPostUploadImage_ReplaceImage(t *testing.T) {
 		BaseID:    "base-001",
 		UserID:    "user-001",
 		ImageID:   "old-image.jpg",
-		Status:    models.TaskStatusImcomplete,
+		Status:    models.TaskStatusIncomplete,
 		StartTime: utils.NowJST().Add(-1 * time.Hour),
 		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
@@ -394,7 +394,7 @@ func TestPostUploadImage_PermissionDenied(t *testing.T) {
 		TaskID:    "task-other-user",
 		BaseID:    "base-001",
 		UserID:    "user-999",
-		Status:    models.TaskStatusImcomplete,
+		Status:    models.TaskStatusIncomplete,
 		StartTime: utils.NowJST().Add(-1 * time.Hour),
 		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
@@ -433,7 +433,7 @@ func TestPostUploadImage_UnsupportedImageType(t *testing.T) {
 		TaskID:    "task-invalid-image",
 		BaseID:    "base-001",
 		UserID:    "user-001",
-		Status:    models.TaskStatusImcomplete,
+		Status:    models.TaskStatusIncomplete,
 		StartTime: utils.NowJST().Add(-1 * time.Hour),
 		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
@@ -469,7 +469,7 @@ func TestPutTaskStatus_Complete(t *testing.T) {
 		TaskID:    "task-Complete",
 		BaseID:    "base-001",
 		UserID:    "user-001",
-		Status:    models.TaskStatusImcomplete,
+		Status:    models.TaskStatusIncomplete,
 		StartTime: utils.NowJST().Add(-1 * time.Hour),
 		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
@@ -537,7 +537,7 @@ func TestPutTaskStatus_Expired(t *testing.T) {
 		TaskID:    "task-Expired",
 		BaseID:    "base-001",
 		UserID:    "user-001",
-		Status:    models.TaskStatusImcomplete,
+		Status:    models.TaskStatusIncomplete,
 		StartTime: utils.NowJST().Add(-2 * time.Hour),
 		EndTime:   utils.NowJST().Add(-1 * time.Hour), // 既に終了
 	}
@@ -569,7 +569,7 @@ func TestPutTaskStatus_Pending(t *testing.T) {
 		TaskID:       "task-pending",
 		BaseID:       "base-001",
 		UserID:       "user-001",
-		Status:       models.TaskStatusImcomplete,
+		Status:       models.TaskStatusIncomplete,
 		StartTime:    utils.NowJST().Add(-1 * time.Hour),
 		EndTime:      utils.NowJST().Add(1 * time.Hour),
 		ImageID:      "image-001",
@@ -623,7 +623,7 @@ func TestPutTaskStatus_Pending_RequireImageButNoImageID(t *testing.T) {
 		TaskID:       "task-pending-no-image",
 		BaseID:       "base-001",
 		UserID:       "user-001",
-		Status:       models.TaskStatusImcomplete,
+		Status:       models.TaskStatusIncomplete,
 		StartTime:    utils.NowJST().Add(-1 * time.Hour),
 		EndTime:      utils.NowJST().Add(1 * time.Hour),
 		ImageID:      "",   // 画像なし
@@ -790,7 +790,7 @@ func TestPutTaskStatus_InvalidStatus(t *testing.T) {
 		TaskID:    "task-invalid-status",
 		BaseID:    "base-001",
 		UserID:    "user-001",
-		Status:    models.TaskStatusImcomplete,
+		Status:    models.TaskStatusIncomplete,
 		StartTime: utils.NowJST().Add(-1 * time.Hour),
 		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}

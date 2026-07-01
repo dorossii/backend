@@ -14,7 +14,7 @@ func TestTask(t *testing.T) {
 			TaskID:       "task-001",
 			BaseID:       "base-001",
 			UserID:       "user-001",
-			Status:       models.TaskStatusImcomplete,
+			Status:       models.TaskStatusIncomplete,
 			StartTime:    utils.NowJST(),
 			EndTime:      utils.NowJST().Add(24 * time.Hour),
 			ImageID:      "",
