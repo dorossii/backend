@@ -254,6 +254,10 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		}
 
 		// TODO: 汚さ更新につかう処理を関数化(レスキューは入れなくていい)
+		err = applyTaskCompletionEffect(tx, userID, baseTask)
+		if err != nil {
+			return PutTaskStatusResponse{}, err
+		}
 
 		difficultyLevel := baseTask.DifficultyLevel * GarbagePower // 汚さ数値の計算
 
@@ -516,4 +520,92 @@ func validateTaskTransition(task models.Task, actor string, nextStatus models.Ta
 	}
 
 	return ErrInvalidTaskState
+}
+
+// 汚さ更新
+func applyTaskCompletionEffect(tx *gorm.DB, userID string, baseTask models.BaseTask) error {
+
+	user, err := repositories.GetUser(userID)
+	if err != nil {
+		return err
+	}
+
+	dirtAmount := baseTask.DifficultyLevel * GarbagePower
+
+	// 自分の汚さ減少
+	err = repositories.UpdateDirtLevel(tx, userID, -dirtAmount)
+	if err != nil {
+		return err
+	}
+
+	// 嫌がらせ相手の選出
+	targetUserID, err := chooseTrashTarget(userID, user.TargetUser)
+	if err != nil {
+		return err
+	}
+
+	if targetUserID == "" {
+		return nil
+	}
+
+	// 相手の汚さ増加
+	err = repositories.UpdateDirtLevel(
+		tx,
+		targetUserID,
+		dirtAmount,
+	)
+	if err != nil {
+		return err
+	}
+
+	notice := &models.TrashNotice{
+		NoticeID:   uuid.NewString(),
+		SenderID:   userID,
+		ReceiverID: targetUserID,
+		Count:      baseTask.DifficultyLevel,
+	}
+
+	return repositories.CreateTrashNotice(tx, notice)
+}
+
+func chooseTrashTarget(userID string, targetUserID string) (string, error) {
+	// レスキュー対象除外
+	rescueUserIDs, err := repositories.GetRescueUserIDs(userID)
+	if err != nil {
+		return "", err
+	}
+
+	rescueMap := make(map[string]bool)
+
+	for _, id := range rescueUserIDs {
+		rescueMap[id.FriendID] = true
+	}
+
+	if targetUserID != "" {
+		// 指定ターゲットがレスキュー対象なら再抽選
+		if rescueMap[targetUserID] {
+			targetUserID = ""
+		}
+	}
+
+	if targetUserID == "" {
+		friends, err := repositories.GetFriends(userID)
+		if err != nil {
+			return "", err
+		}
+
+		var candidates []string
+
+		for _, friend := range friends {
+			if !rescueMap[friend.UserID] {
+				candidates = append(candidates, friend.UserID)
+			}
+		}
+
+		if len(candidates) > 0 {
+			targetUserID = candidates[rand.Intn(len(candidates))]
+		}
+	}
+
+	return targetUserID, nil
 }
