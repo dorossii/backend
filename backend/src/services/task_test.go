@@ -652,6 +652,7 @@ func TestPutTaskStatus_Pending_RequireImageButNoImageID(t *testing.T) {
 // タスクステータス更新(未完了: 正常系)
 func TestPutTaskStatus_Incomplete(t *testing.T) {
 	TestRegisterUser(t)
+	seedFriend(t)
 
 	task := models.Task{
 		TaskID:    "task-incomplete",
@@ -669,7 +670,7 @@ func TestPutTaskStatus_Incomplete(t *testing.T) {
 	message := "普通に汚い"
 
 	resp, err := services.PutTaskStatus(
-		"user-001",
+		"user-002",
 		"task-incomplete",
 		services.TaskStatusIncomplete,
 		message,
@@ -709,6 +710,7 @@ func TestPutTaskStatus_Incomplete(t *testing.T) {
 // タスクステータス更新(未完了: 認証待ち以外から戻そうとする)
 func TestPutTaskStatus_Incomplete_NotPending(t *testing.T) {
 	TestRegisterUser(t)
+	seedFriend(t)
 
 	task := models.Task{
 		TaskID:    "task-incomplete-not-pending",
@@ -724,7 +726,7 @@ func TestPutTaskStatus_Incomplete_NotPending(t *testing.T) {
 	}
 
 	_, err := services.PutTaskStatus(
-		"user-001",
+		"user-002",
 		"task-incomplete-not-pending",
 		services.TaskStatusIncomplete,
 		"差し戻し理由",
@@ -745,6 +747,7 @@ func TestPutTaskStatus_Incomplete_NotPending(t *testing.T) {
 // タスクステータス更新(未完了: 拒否理由なし)
 func TestPutTaskStatus_Incomplete_EmptyMessage(t *testing.T) {
 	TestRegisterUser(t)
+	seedFriend(t)
 
 	task := models.Task{
 		TaskID:    "task-incomplete-empty-message",
@@ -760,7 +763,7 @@ func TestPutTaskStatus_Incomplete_EmptyMessage(t *testing.T) {
 	}
 
 	_, err := services.PutTaskStatus(
-		"user-001",
+		"user-002",
 		"task-incomplete-empty-message",
 		services.TaskStatusIncomplete,
 		"",
