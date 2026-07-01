@@ -250,7 +250,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		rescueUserIDs, err = repositories.GetRescueUserIDs(userID)
 
 		// 汚さ更新
-		dirtAmount, err := applyTaskCompletionEffect(tx, userID, baseTask, rescueUserIDs)
+		user, dirtAmount, err := applyTaskCompletionEffect(tx, userID, baseTask, rescueUserIDs)
 		if err != nil {
 			return PutTaskStatusResponse{}, err
 		}
@@ -474,11 +474,10 @@ func validateTaskTransition(task models.Task, actor string, nextStatus models.Ta
 }
 
 // 汚さ更新
-func applyTaskCompletionEffect(tx *gorm.DB, userID string, baseTask models.BaseTask, rescueUserIDs []models.HelpTargets) (int, error) {
-
+func applyTaskCompletionEffect(tx *gorm.DB, userID string, baseTask models.BaseTask, rescueUserIDs []models.HelpTargets) (models.User, int, error) {
 	user, err := repositories.GetUser(userID)
 	if err != nil {
-		return 0, err
+		return models.User{}, 0, err
 	}
 
 	dirtAmount := baseTask.DifficultyLevel * GarbagePower
@@ -486,17 +485,17 @@ func applyTaskCompletionEffect(tx *gorm.DB, userID string, baseTask models.BaseT
 	// 自分の汚さ減少
 	err = repositories.UpdateDirtLevel(tx, userID, -dirtAmount)
 	if err != nil {
-		return 0, err
+		return models.User{}, 0, err
 	}
 
 	// 嫌がらせ相手の選出
 	targetUserID, err := chooseTrashTarget(userID, user.TargetUser, rescueUserIDs)
 	if err != nil {
-		return 0, err
+		return models.User{}, 0, err
 	}
 
 	if targetUserID == "" {
-		return 0, nil
+		return models.User{}, 0, err
 	}
 
 	// 相手の汚さ増加
@@ -506,7 +505,7 @@ func applyTaskCompletionEffect(tx *gorm.DB, userID string, baseTask models.BaseT
 		dirtAmount,
 	)
 	if err != nil {
-		return 0, err
+		return models.User{}, 0, err
 	}
 
 	notice := &models.TrashNotice{
@@ -516,7 +515,7 @@ func applyTaskCompletionEffect(tx *gorm.DB, userID string, baseTask models.BaseT
 		Count:      baseTask.DifficultyLevel,
 	}
 
-	return dirtAmount, repositories.CreateTrashNotice(tx, notice)
+	return *user, dirtAmount, repositories.CreateTrashNotice(tx, notice)
 }
 
 func chooseTrashTarget(userID string, targetUserID string, rescueUserIDs []models.HelpTargets) (string, error) {
