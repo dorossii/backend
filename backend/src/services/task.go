@@ -4,6 +4,7 @@ import (
 	"backend/logger"
 	"backend/models"
 	"backend/repositories"
+	"backend/utils"
 	"net/http"
 
 	"errors"
@@ -57,7 +58,7 @@ func PostTaskTauntMessage(userId string, friendId string, msg string) error {
 		UserID:     userId,
 		SenderID:   friendId,
 		Title:      msg,
-		NotifiedAt: time.Now(),
+		NotifiedAt: utils.NowJST(),
 	}
 
 	err = repositories.CreateRemindNotiec(notice)
@@ -277,6 +278,32 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 					return PutTaskStatusResponse{}, err
 				}
 			}
+		}
+
+		lastCompleted := user.LastTaskCompletedAt
+		now := utils.NowJST()
+
+		diffDays := -1
+
+		if lastCompleted != nil {
+			diffDays = int(
+				now.Truncate(24*time.Hour).
+					Sub(lastCompleted.Truncate(24*time.Hour)).
+					Hours() / 24,
+			)
+		}
+
+		newCombo := 1
+
+		if diffDays == 0 { // すでに今日分のコンボは加算されている
+			newCombo = user.Combo
+		} else if diffDays == 1 { // 最終更新が昨日なのでコンボ追加
+			newCombo = user.Combo + 1
+		}
+
+		err = repositories.UpdateUserCombo(tx, userID, newCombo, now)
+		if err != nil {
+			return PutTaskStatusResponse{}, err
 		}
 
 		if err := tx.Commit().Error; err != nil {
@@ -526,4 +553,25 @@ func chooseTrashTarget(userID string, targetUserID string, rescueUserIDs []model
 	}
 
 	return targetUserID, nil
+}
+
+
+
+func GetTaskImage(imageID string) (filePath string, contentType string, err error) {
+	candidates := []struct {
+		ext         string
+		contentType string
+	}{
+		{".jpg", "image/jpeg"},
+		{".png", "image/png"},
+	}
+
+	for _, c := range candidates {
+		path := filepath.Join(uploadDir, imageID+c.ext)
+		if _, statErr := os.Stat(path); statErr == nil {
+			return path, c.contentType, nil
+		}
+	}
+
+	return "", "", ErrTaskNotFound
 }

@@ -186,3 +186,24 @@ func PutTaskStatusHandler(ctx echo.Context) error {
 		"requireImage": result.RequireImage,
 	})
 }
+
+// タスク写真取得
+func GetTaskImageHandler(ctx echo.Context) error {
+	imageID := ctx.Param("imageId")
+
+	filePath, _, err := services.GetTaskImage(imageID)
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrTaskNotFound):
+			return ctx.JSON(http.StatusNotFound, echo.Map{
+				"error": err.Error(),
+			})
+		default:
+			return ctx.JSON(http.StatusInternalServerError, echo.Map{
+				"error": "internal server error",
+			})
+		}
+	}
+
+	return ctx.File(filePath)
+}
