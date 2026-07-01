@@ -8,32 +8,29 @@ import (
 )
 
 type RegisterUserRequest struct {
-	UserName    string `json:"userName"`
-	BirthDate   int64  `json:"birthDate"`
-	MailAddress string `json:"mailAddress"`
-	LivingType  string `json:"livingType"`
+	BirthDate  int64  `json:"birthDate"`
+	LivingType string `json:"livingType"`
 }
 
 type RegisterUserResponse struct {
-	UserID      string `json:"userId"`
-	UserName    string `json:"userName"`
-	BirthDate   int64  `json:"birthDate"`
-	MailAddress string `json:"mailAddress"`
-	LivingType  string `json:"livingType"`
+	UserID     string `json:"userId"`
+	UserName   string `json:"userName"`
+	BirthDate  int64  `json:"birthDate"`
+	LivingType string `json:"livingType"`
 }
 
-func RegisterUser(userID string, req RegisterUserRequest) (*RegisterUserResponse, error) {
-	if req.LivingType != "alone" && req.LivingType != "together" {
-		return nil, errors.New("livingType は alone か together のみ有効です")
+func RegisterUser(userID, userName, email string, req RegisterUserRequest) (*RegisterUserResponse, error) {
+	if req.LivingType != "alone" && req.LivingType != "family" {
+		return nil, errors.New("livingType は alone か family のみ有効です")
 	}
 
 	birthDate := time.Unix(req.BirthDate, 0).UTC()
 
 	user := &models.User{
 		UserID:     userID,
-		UserName:   req.UserName,
+		UserName:   userName,
 		BirthDate:  birthDate,
-		Mailadress: req.MailAddress,
+		Mailadress: email,
 	}
 
 	if err := repositories.CreateUser(user); err != nil {
@@ -41,10 +38,9 @@ func RegisterUser(userID string, req RegisterUserRequest) (*RegisterUserResponse
 	}
 
 	return &RegisterUserResponse{
-		UserID:      user.UserID,
-		UserName:    user.UserName,
-		BirthDate:   user.BirthDate.Unix(),
-		MailAddress: user.Mailadress,
-		LivingType:  req.LivingType,
+		UserID:     user.UserID,
+		UserName:   user.UserName,
+		BirthDate:  user.BirthDate.Unix(),
+		LivingType: req.LivingType,
 	}, nil
 }

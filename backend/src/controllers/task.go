@@ -24,9 +24,7 @@ func GetTask(ctx echo.Context) error {
 		})
 	}
 
-	return ctx.JSON(200, map[string]interface{}{
-		"tasks": tasks,
-	})
+	return ctx.JSON(200, tasks)
 }
 
 type PostTaskTauntMessageRequest struct {

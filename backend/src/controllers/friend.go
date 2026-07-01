@@ -164,17 +164,15 @@ func PostAttackerSettingsHandler(ctx echo.Context) error {
 func PostRescuerSettingsHandler(ctx echo.Context) error {
 	userId := ctx.Get("UserID").(string)
 
-	var req struct {
-		TargetUsers []string `json:"TargetUsers"`
-	}
-	if err := ctx.Bind(&req); err != nil {
+	var targetUsers []string
+	if err := ctx.Bind(&targetUsers); err != nil {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid request",
 		})
 	}
-	
+
 	// ターゲットユーザーの設定
-	err := services.PostRescuerSettings(userId, req.TargetUsers)
+	err := services.PostRescuerSettings(userId, targetUsers)
 
 	if err != nil {
 		logger.PrintErr("PostRescuerSettingsHandler", err)
