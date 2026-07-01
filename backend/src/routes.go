@@ -38,17 +38,11 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 			// タスク取得
 			task.GET("", controllers.GetTask)
 
-			// タスク詳細取得
-			task.GET("/:id", TempController)
-
 			// タスク写真のアップロード
 			task.POST("/:id/image", controllers.PostUploadImageHandler)
 
 			// タスク煽りメッセージ
 			task.POST("/message", controllers.PostTauntMessageHandler)
-
-			// 写真確認
-			task.GET("/:imageId/image", controllers.GetTaskImageHandler)
 
 			// タスクのステータス更新
 			task.PUT("/:id", controllers.PutTaskStatusHandler)
@@ -57,6 +51,9 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		// タスク複数完了
 		user.POST("/tasks/complete", TempController)
 	}
+
+	// タスク写真確認（認証不要）
+	router.GET("/user/task/:imageId/image", controllers.GetTaskImageHandler)
 
 	// friendグループ
 	friend := router.Group("/friend", middlewares.RequireAuth)
