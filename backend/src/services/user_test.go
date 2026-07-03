@@ -6,11 +6,20 @@ import (
 	"testing"
 )
 
-func TestRegisterUser(t *testing.T) {
+func truncateUsersAndRooms(t *testing.T) {
+	t.Helper()
 
+	if err := models.DB.Exec("TRUNCATE TABLE user_rooms").Error; err != nil {
+		t.Fatal(err)
+	}
 	if err := models.DB.Exec("TRUNCATE TABLE users").Error; err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestRegisterUser(t *testing.T) {
+
+	truncateUsersAndRooms(t)
 
 	req := services.RegisterUserRequest{
 		BirthDate:  946684800, // 2000-01-01 00:00:00 UTC
@@ -33,6 +42,14 @@ func TestRegisterUser(t *testing.T) {
 	}
 	if res.LivingType != "alone" {
 		t.Fatalf("unexpected LivingType: %s", res.LivingType)
+	}
+
+	var room models.UserRoom
+	if err := models.DB.First(&room, "user_id = ?", "user-001").Error; err != nil {
+		t.Fatalf("UserRoom not created: %v", err)
+	}
+	if !room.IsAlone {
+		t.Fatalf("expected IsAlone=true for livingType=alone")
 	}
 
 	// ユーザー二人目を追加
@@ -89,9 +106,7 @@ func TestRegisterUser(t *testing.T) {
 
 func TestRegisterUser_Family(t *testing.T) {
 
-	if err := models.DB.Exec("TRUNCATE TABLE users").Error; err != nil {
-		t.Fatal(err)
-	}
+	truncateUsersAndRooms(t)
 
 	req := services.RegisterUserRequest{
 		BirthDate:  926726400, // 1999-05-15 00:00:00 UTC
@@ -106,13 +121,19 @@ func TestRegisterUser_Family(t *testing.T) {
 	if res.LivingType != "family" {
 		t.Fatalf("unexpected LivingType: %s", res.LivingType)
 	}
+
+	var room models.UserRoom
+	if err := models.DB.First(&room, "user_id = ?", "user-002").Error; err != nil {
+		t.Fatalf("UserRoom not created: %v", err)
+	}
+	if room.IsAlone {
+		t.Fatalf("expected IsAlone=false for livingType=family")
+	}
 }
 
 func TestRegisterUser_InvalidLivingType(t *testing.T) {
 
-	if err := models.DB.Exec("TRUNCATE TABLE users").Error; err != nil {
-		t.Fatal(err)
-	}
+	truncateUsersAndRooms(t)
 
 	req := services.RegisterUserRequest{
 		BirthDate:  946684800,
