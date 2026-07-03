@@ -57,3 +57,34 @@ func RegisterUser(userID, userName, email string, req RegisterUserRequest) (*Reg
 		LivingType: req.LivingType,
 	}, nil
 }
+
+type LifestyleRequest struct {
+	IsAlone   bool `json:"isAlone"`
+	HasWasher bool `json:"hasWasher"`
+	HasVacuum bool `json:"hasVacuum"`
+}
+
+type LifestyleResponse struct {
+	IsAlone   bool `json:"isAlone"`
+	HasWasher bool `json:"hasWasher"`
+	HasVacuum bool `json:"hasVacuum"`
+}
+
+// CreateUserLifestyle は生活環境情報を登録する（初回）
+// register時点で UserRoom が既に作成されている可能性があるため UPSERT する
+func CreateUserLifestyle(userID string, req LifestyleRequest) (*LifestyleResponse, error) {
+	if err := repositories.UpsertUserRoom(userID, req.IsAlone, req.HasWasher, req.HasVacuum); err != nil {
+		return nil, err
+	}
+
+	return &LifestyleResponse{
+		IsAlone:   req.IsAlone,
+		HasWasher: req.HasWasher,
+		HasVacuum: req.HasVacuum,
+	}, nil
+}
+
+// UpdateUserLifestyle は生活環境情報を編集する（2回目以降）
+func UpdateUserLifestyle(userID string, req LifestyleRequest) error {
+	return repositories.UpdateUserRoom(userID, req.IsAlone, req.HasWasher, req.HasVacuum)
+}
