@@ -10,6 +10,14 @@ func CreateUser(user *models.User) error {
 	return models.DB.Create(user).Error
 }
 
+func CreateUserTx(tx *gorm.DB, user *models.User) error {
+	return tx.Create(user).Error
+}
+
+func CreateUserRoomTx(tx *gorm.DB, userRoom *models.UserRoom) error {
+	return tx.Create(userRoom).Error
+}
+
 func GetUser(UserID string) (*models.User, error) {
 	var user models.User
 	err := models.DB.First(&user, "user_id = ?", UserID).Error

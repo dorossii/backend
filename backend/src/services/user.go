@@ -5,6 +5,8 @@ import (
 	"backend/repositories"
 	"errors"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type RegisterUserRequest struct {
@@ -33,7 +35,18 @@ func RegisterUser(userID, userName, email string, req RegisterUserRequest) (*Reg
 		Mailadress: email,
 	}
 
-	if err := repositories.CreateUser(user); err != nil {
+	userRoom := &models.UserRoom{
+		UserID:  userID,
+		IsAlone: req.LivingType == "alone",
+	}
+
+	err := models.DB.Transaction(func(tx *gorm.DB) error {
+		if err := repositories.CreateUserTx(tx, user); err != nil {
+			return err
+		}
+		return repositories.CreateUserRoomTx(tx, userRoom)
+	})
+	if err != nil {
 		return nil, err
 	}
 
