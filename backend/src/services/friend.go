@@ -199,6 +199,16 @@ func GetFriendRequests(userID string) ([]FriendRequest, error) {
 	return FriendReqests, nil
 }
 
+// 嫌がらせ設定の取得
+func GetAttackerSettings(userID string) (string, error) {
+	attacker, err := repositories.GetAttackerSettings(userID)
+	if err != nil {
+		logger.PrintErr("get attacker settings", err)
+		return "", err
+	}
+	return attacker, nil
+}
+
 // 嫌がらせ設定
 func PostAttackerSettings(userID string, targetUser string) error {
 	// 空文字ならランダム設定

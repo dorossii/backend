@@ -76,6 +76,9 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		// フレンド削除
 		friend.DELETE("/:id", controllers.DeleteFriend)
 
+		// 嫌がらせする人の取得
+		friend.GET("/attack", controllers.GetAttackerSettingsHandler)
+
 		// 嫌がらせする人の設定
 		friend.PUT("/attack", controllers.PostAttackerSettingsHandler)
 

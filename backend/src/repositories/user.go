@@ -52,6 +52,9 @@ func UpdateAttackerSettingsTx(tx *gorm.DB, userID string, targetUser string) err
 func GetAttackerSettings(userID string) (string, error) {
 	var user models.User
 	err := models.DB.Select("target_user").First(&user, "user_id = ?", userID).Error
+	if err == gorm.ErrRecordNotFound {
+		return "", nil // 設定がない場合は空文字を返す
+	}
 	if err != nil {
 		return "", err
 	}

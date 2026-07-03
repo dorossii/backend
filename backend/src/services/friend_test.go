@@ -259,6 +259,49 @@ func seedFriend(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+// 嫌がらせ取得
+func TestGetAttackerSettings(t *testing.T) {
+	truncateFriendShips(t)
+
+	TestRegisterUser(t)
+	seedFriend(t)
+
+	err := services.PostAttackerSettings("user-001", "user-002")
+	if err != nil {
+		t.Fatalf("PostAttackerSettings failed: %v", err)
+	}
+
+
+	// 嫌がらせ設定取得
+	user,err := services.GetAttackerSettings("user-001")
+	if err != nil {
+		t.Fatalf("GetAttackerSettings failed: %v", err)
+	}
+
+	if user != "user-002" {
+		t.Fatalf(
+			"unexpected target user: %s",
+			user,
+		)
+	}
+}
+
+// 嫌がらせ取得(空白)
+func TestGetAttackerSettings_Empty(t *testing.T) {
+	truncateFriendShips(t)
+
+	TestRegisterUser(t)
+
+	// 嫌がらせ設定取得
+	user,err := services.GetAttackerSettings("user-001")
+	if err != nil {
+		t.Fatalf("GetAttackerSettings failed: %v", err)
+	}
+
+	if user != "" {
+		t.Fatalf("unexpected target user: %s", user)
+	}
+}
 
 // 嫌がらせ設定
 func TestPostAttackerSettings(t *testing.T) {
