@@ -128,6 +128,29 @@ type PostAttackerSettingsRequest struct {
 	TargetUser string `json:"TargetUser"`
 }
 
+// 嫌がらせする人を取得
+func GetAttackerSettingsHandler(ctx echo.Context) error {
+	userId := ctx.Get("UserID").(string)
+
+	attacker, err := services.GetAttackerSettings(userId)
+	if err != nil {
+		logger.PrintErr("GetAttackerSettingsHandler", err)
+
+		if errors.Is(err, services.ErrFriendNotFound) {
+			return ctx.JSON(http.StatusForbidden, echo.Map{
+				"error": "friend not found",
+			})
+		}
+
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "internal server error",
+		})
+	}
+
+	return ctx.JSON(http.StatusOK, echo.Map{
+		"TargetUser": attacker,
+	})
+}
 // 嫌がらせする人の設定
 func PostAttackerSettingsHandler(ctx echo.Context) error {
 	userId := ctx.Get("UserID").(string)
