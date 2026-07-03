@@ -67,11 +67,12 @@ func GetUser(UserID string) (*models.User, error) {
 	return &user, err
 }
 
+// UpdateUserName は指定したユーザーの表示名を更新する
 func UpdateUserName(userID string, userName string) error {
 	return models.DB.
-		Model(&models.User{}).
-		Where("user_id = ?", userID).
-		Update("user_name", userName).Error
+		Model(&models.User{}).              // Userテーブルを対象にする
+		Where("user_id = ?", userID).       // 更新対象を user_id で絞り込む
+		Update("user_name", userName).Error // user_name カラムのみ更新する
 }
 
 func UpdateAttackerSettings(userID string, targetUser string) error {

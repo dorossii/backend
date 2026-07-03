@@ -149,45 +149,47 @@ func TestRegisterUser_InvalidLivingType(t *testing.T) {
 	}
 }
 
+// TestUpdateUserSetting はユーザー名が正しく更新されることを確認する
 func TestUpdateUserSetting(t *testing.T) {
 
-	truncateUsersAndRooms(t)
+	truncateUsersAndRooms(t) // usersテーブルとuser_roomsテーブルを初期化する
 
 	registerReq := services.RegisterUserRequest{
-		BirthDate:  946684800,
-		LivingType: "alone",
+		BirthDate:  946684800, // 事前にユーザーを登録するための誕生日
+		LivingType: "alone",   // 事前にユーザーを登録するための生活形態
 	}
 	if _, err := services.RegisterUser("user-001", "syatyo", "syatyo@example.com", registerReq); err != nil {
-		t.Fatalf("RegisterUser failed: %v", err)
+		t.Fatalf("RegisterUser failed: %v", err) // 事前準備のユーザー登録が失敗したら終了
 	}
 
 	if err := services.UpdateUserSetting("user-001", services.UserSettingRequest{UserName: "new-name"}); err != nil {
-		t.Fatalf("UpdateUserSetting failed: %v", err)
+		t.Fatalf("UpdateUserSetting failed: %v", err) // 更新処理自体が失敗したら終了
 	}
 
 	var user models.User
 	if err := models.DB.First(&user, "user_id = ?", "user-001").Error; err != nil {
-		t.Fatalf("failed to find User: %v", err)
+		t.Fatalf("failed to find User: %v", err) // 更新後のユーザーが取得できなければ終了
 	}
 	if user.UserName != "new-name" {
-		t.Fatalf("unexpected UserName: %s", user.UserName)
+		t.Fatalf("unexpected UserName: %s", user.UserName) // ユーザー名が更新されていなければ失敗
 	}
 }
 
+// TestUpdateUserSetting_EmptyUserName は空文字のユーザー名がエラーになることを確認する
 func TestUpdateUserSetting_EmptyUserName(t *testing.T) {
 
-	truncateUsersAndRooms(t)
+	truncateUsersAndRooms(t) // usersテーブルとuser_roomsテーブルを初期化する
 
 	registerReq := services.RegisterUserRequest{
-		BirthDate:  946684800,
-		LivingType: "alone",
+		BirthDate:  946684800, // 事前にユーザーを登録するための誕生日
+		LivingType: "alone",   // 事前にユーザーを登録するための生活形態
 	}
 	if _, err := services.RegisterUser("user-001", "syatyo", "syatyo@example.com", registerReq); err != nil {
-		t.Fatalf("RegisterUser failed: %v", err)
+		t.Fatalf("RegisterUser failed: %v", err) // 事前準備のユーザー登録が失敗したら終了
 	}
 
-	err := services.UpdateUserSetting("user-001", services.UserSettingRequest{UserName: ""})
+	err := services.UpdateUserSetting("user-001", services.UserSettingRequest{UserName: ""}) // 空文字を渡す
 	if err == nil {
-		t.Fatal("expected error but got nil")
+		t.Fatal("expected error but got nil") // バリデーションエラーが返らなければ失敗
 	}
 }
