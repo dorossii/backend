@@ -67,6 +67,13 @@ func GetUser(UserID string) (*models.User, error) {
 	return &user, err
 }
 
+func UpdateUserName(userID string, userName string) error {
+	return models.DB.
+		Model(&models.User{}).
+		Where("user_id = ?", userID).
+		Update("user_name", userName).Error
+}
+
 func UpdateAttackerSettings(userID string, targetUser string) error {
 	err := models.DB.
 		Model(&models.User{}).

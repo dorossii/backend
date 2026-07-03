@@ -148,3 +148,46 @@ func TestRegisterUser_InvalidLivingType(t *testing.T) {
 		t.Fatal("expected error but got nil")
 	}
 }
+
+func TestUpdateUserSetting(t *testing.T) {
+
+	truncateUsersAndRooms(t)
+
+	registerReq := services.RegisterUserRequest{
+		BirthDate:  946684800,
+		LivingType: "alone",
+	}
+	if _, err := services.RegisterUser("user-001", "syatyo", "syatyo@example.com", registerReq); err != nil {
+		t.Fatalf("RegisterUser failed: %v", err)
+	}
+
+	if err := services.UpdateUserSetting("user-001", services.UserSettingRequest{UserName: "new-name"}); err != nil {
+		t.Fatalf("UpdateUserSetting failed: %v", err)
+	}
+
+	var user models.User
+	if err := models.DB.First(&user, "user_id = ?", "user-001").Error; err != nil {
+		t.Fatalf("failed to find User: %v", err)
+	}
+	if user.UserName != "new-name" {
+		t.Fatalf("unexpected UserName: %s", user.UserName)
+	}
+}
+
+func TestUpdateUserSetting_EmptyUserName(t *testing.T) {
+
+	truncateUsersAndRooms(t)
+
+	registerReq := services.RegisterUserRequest{
+		BirthDate:  946684800,
+		LivingType: "alone",
+	}
+	if _, err := services.RegisterUser("user-001", "syatyo", "syatyo@example.com", registerReq); err != nil {
+		t.Fatalf("RegisterUser failed: %v", err)
+	}
+
+	err := services.UpdateUserSetting("user-001", services.UserSettingRequest{UserName: ""})
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+}

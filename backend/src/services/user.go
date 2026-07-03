@@ -121,3 +121,15 @@ func UpdateUserLifestyle(userID string, req LifestyleRequest) error {
 
 	return repositories.UpdateUserRoom(userID, room)
 }
+
+type UserSettingRequest struct {
+	UserName string `json:"userName"`
+}
+
+func UpdateUserSetting(userID string, req UserSettingRequest) error {
+	if req.UserName == "" {
+		return errors.New("userName は必須です")
+	}
+
+	return repositories.UpdateUserName(userID, req.UserName)
+}

@@ -55,3 +55,18 @@ func UpdateUserLifestyle(ctx echo.Context) error {
 
 	return ctx.JSON(http.StatusOK, map[string]string{})
 }
+
+func UpdateUserSetting(ctx echo.Context) error {
+	userId := ctx.Get("UserID").(string)
+
+	var req services.UserSettingRequest
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
+	}
+
+	if err := services.UpdateUserSetting(userId, req); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]string{})
+}
