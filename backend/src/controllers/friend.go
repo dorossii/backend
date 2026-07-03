@@ -211,7 +211,5 @@ func PostRescuerSettingsHandler(ctx echo.Context) error {
 		})
 	}
 	
-	return ctx.JSON(http.StatusOK, echo.Map{
-		"message": "success",
-	})
+	return ctx.JSON(http.StatusOK, echo.Map{})
 }
