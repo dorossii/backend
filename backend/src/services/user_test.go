@@ -51,6 +51,9 @@ func TestRegisterUser(t *testing.T) {
 	if !room.IsAlone {
 		t.Fatalf("expected IsAlone=true for livingType=alone")
 	}
+	if !room.HasWasher || !room.HasVacuum || !room.HasRobot || !room.UseTableware || !room.HasDishwasher {
+		t.Fatalf("expected default lifestyle fields to be true: %+v", room) // register時点では全てデフォルト値(true)であることを確認する
+	}
 
 	// ユーザー二人目を追加
 	req = services.RegisterUserRequest{

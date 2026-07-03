@@ -24,3 +24,34 @@ func RegisterUser(ctx echo.Context) error {
 
 	return ctx.JSON(http.StatusOK, res)
 }
+
+func CreateUserLifestyle(ctx echo.Context) error {
+	userId := ctx.Get("UserID").(string)
+
+	var req services.LifestyleRequest
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
+	}
+
+	res, err := services.CreateUserLifestyle(userId, req)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return ctx.JSON(http.StatusOK, res)
+}
+
+func UpdateUserLifestyle(ctx echo.Context) error {
+	userId := ctx.Get("UserID").(string)
+
+	var req services.LifestyleRequest
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
+	}
+
+	if err := services.UpdateUserLifestyle(userId, req); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]string{})
+}

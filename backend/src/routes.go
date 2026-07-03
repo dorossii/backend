@@ -27,10 +27,10 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		user.PUT("/setting", TempController)
 
 		// 生活環境情報の登録
-		user.POST("/lifestyle", TempController)
+		user.POST("/lifestyle", controllers.CreateUserLifestyle)
 
 		// 生活環境情報の編集
-		user.PUT("/lifestyle", TempController)
+		user.PUT("/lifestyle", controllers.UpdateUserLifestyle)
 
 		// タスクグループ
 		task := user.Group("/task")
