@@ -5,7 +5,7 @@ import "time"
 type TaskStatus int
 
 const (
-	TaskStatusImcomplete TaskStatus = 0 // 未完了
+	TaskStatusIncomplete TaskStatus = 0 // 未完了
 	TaskStatusPending    TaskStatus = 1 // 承認待ち
 	TaskStatusCompleted  TaskStatus = 2 // 完了
 )

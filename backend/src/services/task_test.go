@@ -271,7 +271,7 @@ func TestPostUploadImage_JPEG(t *testing.T) {
 		TaskID:    "task-jpeg",
 		BaseID:    "base-001",
 		UserID:    "user-001",
-		Status:    models.TaskStatusImcomplete,
+		Status:    models.TaskStatusIncomplete,
 		StartTime: utils.NowJST().Add(-1 * time.Hour),
 		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
@@ -319,7 +319,7 @@ func TestPostUploadImage_ReplaceImage(t *testing.T) {
 		BaseID:    "base-001",
 		UserID:    "user-001",
 		ImageID:   "old-image.jpg",
-		Status:    models.TaskStatusImcomplete,
+		Status:    models.TaskStatusIncomplete,
 		StartTime: utils.NowJST().Add(-1 * time.Hour),
 		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
@@ -394,7 +394,7 @@ func TestPostUploadImage_PermissionDenied(t *testing.T) {
 		TaskID:    "task-other-user",
 		BaseID:    "base-001",
 		UserID:    "user-999",
-		Status:    models.TaskStatusImcomplete,
+		Status:    models.TaskStatusIncomplete,
 		StartTime: utils.NowJST().Add(-1 * time.Hour),
 		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
@@ -433,7 +433,7 @@ func TestPostUploadImage_UnsupportedImageType(t *testing.T) {
 		TaskID:    "task-invalid-image",
 		BaseID:    "base-001",
 		UserID:    "user-001",
-		Status:    models.TaskStatusImcomplete,
+		Status:    models.TaskStatusIncomplete,
 		StartTime: utils.NowJST().Add(-1 * time.Hour),
 		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
@@ -469,7 +469,7 @@ func TestPutTaskStatus_Complete(t *testing.T) {
 		TaskID:    "task-Complete",
 		BaseID:    "base-001",
 		UserID:    "user-001",
-		Status:    models.TaskStatusImcomplete,
+		Status:    models.TaskStatusIncomplete,
 		StartTime: utils.NowJST().Add(-1 * time.Hour),
 		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
@@ -537,7 +537,7 @@ func TestPutTaskStatus_Expired(t *testing.T) {
 		TaskID:    "task-Expired",
 		BaseID:    "base-001",
 		UserID:    "user-001",
-		Status:    models.TaskStatusImcomplete,
+		Status:    models.TaskStatusIncomplete,
 		StartTime: utils.NowJST().Add(-2 * time.Hour),
 		EndTime:   utils.NowJST().Add(-1 * time.Hour), // 既に終了
 	}
@@ -569,7 +569,7 @@ func TestPutTaskStatus_Pending(t *testing.T) {
 		TaskID:       "task-pending",
 		BaseID:       "base-001",
 		UserID:       "user-001",
-		Status:       models.TaskStatusImcomplete,
+		Status:       models.TaskStatusIncomplete,
 		StartTime:    utils.NowJST().Add(-1 * time.Hour),
 		EndTime:      utils.NowJST().Add(1 * time.Hour),
 		ImageID:      "image-001",
@@ -623,7 +623,7 @@ func TestPutTaskStatus_Pending_RequireImageButNoImageID(t *testing.T) {
 		TaskID:       "task-pending-no-image",
 		BaseID:       "base-001",
 		UserID:       "user-001",
-		Status:       models.TaskStatusImcomplete,
+		Status:       models.TaskStatusIncomplete,
 		StartTime:    utils.NowJST().Add(-1 * time.Hour),
 		EndTime:      utils.NowJST().Add(1 * time.Hour),
 		ImageID:      "",   // 画像なし
@@ -653,6 +653,7 @@ func TestPutTaskStatus_Pending_RequireImageButNoImageID(t *testing.T) {
 // タスクステータス更新(未完了: 正常系)
 func TestPutTaskStatus_Incomplete(t *testing.T) {
 	TestRegisterUser(t)
+	seedFriend(t)
 
 	task := models.Task{
 		TaskID:    "task-incomplete",
@@ -670,7 +671,7 @@ func TestPutTaskStatus_Incomplete(t *testing.T) {
 	message := "普通に汚い"
 
 	resp, err := services.PutTaskStatus(
-		"user-001",
+		"user-002",
 		"task-incomplete",
 		services.TaskStatusIncomplete,
 		message,
@@ -692,7 +693,7 @@ func TestPutTaskStatus_Incomplete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if updatedTask.Status != models.TaskStatusImcomplete {
+	if updatedTask.Status != models.TaskStatusIncomplete {
 		t.Fatalf(
 			"unexpected status: %v",
 			updatedTask.Status,
@@ -710,6 +711,7 @@ func TestPutTaskStatus_Incomplete(t *testing.T) {
 // タスクステータス更新(未完了: 認証待ち以外から戻そうとする)
 func TestPutTaskStatus_Incomplete_NotPending(t *testing.T) {
 	TestRegisterUser(t)
+	seedFriend(t)
 
 	task := models.Task{
 		TaskID:    "task-incomplete-not-pending",
@@ -725,7 +727,7 @@ func TestPutTaskStatus_Incomplete_NotPending(t *testing.T) {
 	}
 
 	_, err := services.PutTaskStatus(
-		"user-001",
+		"user-002",
 		"task-incomplete-not-pending",
 		services.TaskStatusIncomplete,
 		"差し戻し理由",
@@ -735,7 +737,7 @@ func TestPutTaskStatus_Incomplete_NotPending(t *testing.T) {
 		t.Fatal("expected error but got nil")
 	}
 
-	if err != services.ErrTaskStatusAlreadyUpdated {
+	if err != services.ErrInvalidTaskState {
 		t.Fatalf(
 			"unexpected error: %v",
 			err,
@@ -746,6 +748,7 @@ func TestPutTaskStatus_Incomplete_NotPending(t *testing.T) {
 // タスクステータス更新(未完了: 拒否理由なし)
 func TestPutTaskStatus_Incomplete_EmptyMessage(t *testing.T) {
 	TestRegisterUser(t)
+	seedFriend(t)
 
 	task := models.Task{
 		TaskID:    "task-incomplete-empty-message",
@@ -761,7 +764,7 @@ func TestPutTaskStatus_Incomplete_EmptyMessage(t *testing.T) {
 	}
 
 	_, err := services.PutTaskStatus(
-		"user-001",
+		"user-002",
 		"task-incomplete-empty-message",
 		services.TaskStatusIncomplete,
 		"",
@@ -787,7 +790,7 @@ func TestPutTaskStatus_InvalidStatus(t *testing.T) {
 		TaskID:    "task-invalid-status",
 		BaseID:    "base-001",
 		UserID:    "user-001",
-		Status:    models.TaskStatusImcomplete,
+		Status:    models.TaskStatusIncomplete,
 		StartTime: utils.NowJST().Add(-1 * time.Hour),
 		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
@@ -902,7 +905,7 @@ func TestPutTaskStatus_AlreadyUpdated(t *testing.T) {
 		t.Fatal("expected error but got nil")
 	}
 
-	if err != services.ErrTaskStatusAlreadyUpdated {
+	if err != services.ErrInvalidTaskState {
 		t.Fatalf(
 			"unexpected error: %v",
 			err,
