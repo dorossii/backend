@@ -86,7 +86,7 @@ func TestGetTasks(t *testing.T) {
 
 	// 取得したタスクの内容を確認
 	for _, task := range tasks {
-		log.Printf("タスクID: %s, タスク名: %s, 期限: %s,難易度: %d", task.TaskID, task.TaskName, task.EndTime.Format("2006-01-02"), task.DifficultyLevel)
+		log.Printf("タスクID: %s, タスク名: %s, 期限: %s,難易度: %d", task.TaskID, task.TaskName, time.Unix(task.EndTime, 0).Format("2006-01-02"), task.DifficultyLevel)
 	}
 }
 
