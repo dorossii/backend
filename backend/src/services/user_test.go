@@ -3,7 +3,10 @@ package services_test
 import (
 	"backend/models"
 	"backend/services"
+	"errors"
 	"testing"
+
+	"gorm.io/gorm"
 )
 
 func truncateUsersAndRooms(t *testing.T) {
@@ -146,5 +149,47 @@ func TestRegisterUser_InvalidLivingType(t *testing.T) {
 	_, err := services.RegisterUser("user-001", "syatyo", "syatyo@example.com", req)
 	if err == nil {
 		t.Fatal("expected error but got nil")
+	}
+}
+
+func TestGetUserStatus(t *testing.T) {
+
+	truncateUsersAndRooms(t)
+
+	req := services.RegisterUserRequest{
+		BirthDate:  946684800,
+		LivingType: "alone",
+	}
+
+	if _, err := services.RegisterUser("user-001", "syatyo", "syatyo@example.com", req); err != nil {
+		t.Fatalf("RegisterUser failed: %v", err)
+	}
+
+	res, err := services.GetUserStatus("user-001")
+	if err != nil {
+		t.Fatalf("GetUserStatus failed: %v", err)
+	}
+
+	if res.UserID != "user-001" {
+		t.Fatalf("unexpected UserID: %s", res.UserID)
+	}
+	if res.UserName != "syatyo" {
+		t.Fatalf("unexpected UserName: %s", res.UserName)
+	}
+	if res.DirtLevel != 0 {
+		t.Fatalf("unexpected DirtLevel: %d", res.DirtLevel)
+	}
+	if res.HealthPoint != 0 {
+		t.Fatalf("unexpected HealthPoint: %d", res.HealthPoint)
+	}
+}
+
+func TestGetUserStatus_NotFound(t *testing.T) {
+
+	truncateUsersAndRooms(t)
+
+	_, err := services.GetUserStatus("not-exist-user")
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		t.Fatalf("expected gorm.ErrRecordNotFound, got: %v", err)
 	}
 }

@@ -63,6 +63,29 @@ func RegisterUser(userID, userName, email string, req RegisterUserRequest) (*Reg
 	}, nil
 }
 
+// UserStatusResponse はホーム画面向けのユーザーステータス
+type UserStatusResponse struct {
+	UserID      string `json:"userId"`
+	UserName    string `json:"userName"`
+	DirtLevel   int    `json:"DirtLevel"`
+	HealthPoint int    `json:"HealthPoint"`
+}
+
+// GetUserStatus はホーム画面向けのユーザーステータスを取得する
+func GetUserStatus(userID string) (*UserStatusResponse, error) {
+	user, err := repositories.GetUser(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &UserStatusResponse{
+		UserID:      user.UserID,
+		UserName:    user.UserName,
+		DirtLevel:   user.DirtLevel,
+		HealthPoint: user.HealthPoint,
+	}, nil
+}
+
 // LifestyleRequest は生活環境情報の登録・編集リクエスト
 type LifestyleRequest struct {
 	IsAlone       bool `json:"isAlone"`       // 一人暮らしか

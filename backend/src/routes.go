@@ -23,6 +23,9 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		// 初回ユーザー登録
 		user.POST("/register", controllers.RegisterUser)
 
+		// ホーム画面 - ユーザーステータス取得
+		user.GET("/status", controllers.GetUserStatus)
+
 		// ユーザー情報の編集
 		user.PUT("/setting", TempController)
 
