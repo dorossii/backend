@@ -121,3 +121,17 @@ func UpdateUserLifestyle(userID string, req LifestyleRequest) error {
 
 	return repositories.UpdateUserRoom(userID, room)
 }
+
+// UserSettingRequest は PUT /app/user/setting のリクエストボディ
+type UserSettingRequest struct {
+	UserName string `json:"userName"` // 変更後のユーザー名
+}
+
+// UpdateUserSetting はユーザー名を更新する
+func UpdateUserSetting(userID string, req UserSettingRequest) error {
+	if req.UserName == "" { // 空文字は許可しない
+		return errors.New("userName は必須です")
+	}
+
+	return repositories.UpdateUserName(userID, req.UserName) // リポジトリ経由でDBを更新する
+}
