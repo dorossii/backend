@@ -25,7 +25,7 @@ func TestGetTasks(t *testing.T) {
 		t.Fatalf("テストユーザーの作成に失敗: %v", err)
 	}
 
-	//　ベースタスクの準備(DueTimeは日数単位)
+	// ベースタスクの準備(DueTimeは日数単位)
 	baseTasks := []models.BaseTask{
 		{
 			BaseID:          "base-001",
@@ -75,7 +75,7 @@ func TestGetTasks(t *testing.T) {
 		t.Errorf("タスクが見つかりません")
 	}
 
-	//取得したタスクの難易度が1から5の範囲内であることを確認
+	// 取得したタスクの難易度が1から5の範囲内であることを確認
 	for _, task := range tasks {
 		if task.DifficultyLevel < 1 || task.DifficultyLevel > 5 {
 			t.Errorf("タスクの難易度が不正です: %d", task.DifficultyLevel)
