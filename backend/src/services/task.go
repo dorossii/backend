@@ -495,7 +495,7 @@ func applyTaskCompletionEffect(tx *gorm.DB, userID string, baseTask models.BaseT
 	}
 
 	if targetUserID == "" {
-		return models.User{}, 0, err
+		return *user, dirtAmount, nil
 	}
 
 	// 相手の汚さ増加
