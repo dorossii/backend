@@ -248,6 +248,9 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		var rescueUserIDs []models.HelpTargets
 
 		rescueUserIDs, err = repositories.GetRescueUserIDs(userID)
+		if err != nil {
+			return PutTaskStatusResponse{}, err
+		}
 
 		// 汚さ更新
 		user, dirtAmount, err := applyTaskCompletionEffect(tx, userID, baseTask, rescueUserIDs)
