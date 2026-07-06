@@ -45,6 +45,45 @@ func GetUserTasks(userID string) ([]TaskResponse, error) {
 	return results, err
 }
 
+// PendingTaskRow は承認待ちタスク取得のScan用中間構造体
+type PendingTaskRow struct {
+	TaskID      string
+	UserID      string
+	TaskName    string
+	Tag         int
+	Description string
+	StartDate   time.Time
+	EndTime     time.Time
+	ImageID     string
+}
+
+// GetPendingTasksForFriends は friendIDs が所有する Status = Pending のタスク一覧を取得する
+func GetPendingTasksForFriends(friendIDs []string) ([]PendingTaskRow, error) {
+	var results []PendingTaskRow
+
+	if len(friendIDs) == 0 {
+		return results, nil
+	}
+
+	err := models.DB.Model(&models.Task{}).
+		Select(`
+            tasks.task_id,
+            tasks.user_id,
+            base_tasks.task_name,
+            base_tasks.tags AS tag,
+            base_tasks.description,
+            tasks.start_time as start_date,
+            tasks.end_time,
+            tasks.image_id
+        `).
+		Joins("JOIN base_tasks ON tasks.base_id = base_tasks.base_id").
+		Where("tasks.user_id IN ?", friendIDs).
+		Where("tasks.status = ?", models.TaskStatusPending).
+		Scan(&results).Error
+
+	return results, err
+}
+
 func GetTask(taskID string) (models.Task, error) {
 	var task models.Task
 	err := models.DB.Model(&models.Task{}).Where("task_id = ?", taskID).First(&task).Error

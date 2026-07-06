@@ -90,6 +90,90 @@ func TestGetTasks(t *testing.T) {
 	}
 }
 
+// services.GetPendingTasksのテスト
+func TestGetPendingTasks(t *testing.T) {
+	truncateFriendShips(t)
+	truncateUsersAndRooms(t)
+
+	TestRegisterUser(t)
+
+	friend := models.FriendShips{
+		UserID:   "user-001",
+		FriendID: "user-002",
+		Status:   models.FriendStatusAccepted,
+	}
+	if err := models.DB.Create(&friend).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	baseTask := models.BaseTask{
+		BaseID:          "base-pending-001",
+		TaskName:        "部屋掃除",
+		DueTime:         1,
+		ImageFlag:       true,
+		Description:     "掃除して部屋をきれいにしよう",
+		DifficultyLevel: 2,
+		Tags:            0,
+	}
+	if err := models.DB.Create(&baseTask).Error; err != nil {
+		t.Fatalf("failed to create dummy base task: %v", err)
+	}
+
+	pendingTask := models.Task{
+		TaskID:    "task-pending-001",
+		BaseID:    baseTask.BaseID,
+		UserID:    "user-002",
+		Status:    models.TaskStatusPending,
+		StartTime: time.Now(),
+		EndTime:   time.Now().Add(24 * time.Hour),
+		ImageID:   "img-001",
+	}
+	if err := models.DB.Create(&pendingTask).Error; err != nil {
+		t.Fatalf("failed to create dummy pending task: %v", err)
+	}
+
+	// user-002自身が所有する未完了タスク（承認待ちではないので含まれないはず）
+	incompleteTask := models.Task{
+		TaskID:    "task-incomplete-001",
+		BaseID:    baseTask.BaseID,
+		UserID:    "user-002",
+		Status:    models.TaskStatusIncomplete,
+		StartTime: time.Now(),
+		EndTime:   time.Now().Add(24 * time.Hour),
+	}
+	if err := models.DB.Create(&incompleteTask).Error; err != nil {
+		t.Fatalf("failed to create dummy incomplete task: %v", err)
+	}
+
+	tasks, err := services.GetPendingTasks("user-001")
+	if err != nil {
+		t.Fatalf("GetPendingTasks failed: %v", err)
+	}
+
+	if len(tasks) != 1 {
+		t.Fatalf("expected 1 pending task, got %d", len(tasks))
+	}
+
+	if tasks[0].TaskID != "task-pending-001" {
+		t.Fatalf("unexpected taskId: %s", tasks[0].TaskID)
+	}
+	if tasks[0].UserID != "user-002" {
+		t.Fatalf("unexpected userId: %s", tasks[0].UserID)
+	}
+
+	// フレンドがいないユーザーは空配列（nilではない）が返る
+	emptyTasks, err := services.GetPendingTasks("user-003")
+	if err != nil {
+		t.Fatalf("GetPendingTasks failed: %v", err)
+	}
+	if emptyTasks == nil {
+		t.Fatalf("expected empty slice, got nil")
+	}
+	if len(emptyTasks) != 0 {
+		t.Fatalf("expected 0 pending tasks, got %d", len(emptyTasks))
+	}
+}
+
 // テスト用のユーザーを作成する関数
 func CreateSampleUser() error {
 	users := []models.User{

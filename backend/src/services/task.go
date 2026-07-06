@@ -40,6 +40,54 @@ func GetTasks(userID string) ([]repositories.TaskResponse, error) {
 	return tasks, nil
 }
 
+// TaskPendingResponse は GET /user/tasks/pending のレスポンス要素
+type TaskPendingResponse struct {
+	TaskID      string `json:"taskId"`
+	UserID      string `json:"userId"`
+	TaskName    string `json:"taskName"`
+	Tag         int    `json:"tag"`
+	Description string `json:"description"`
+	StartDate   int64  `json:"startDate"`
+	EndTime     int64  `json:"endTime"`
+	ImageID     string `json:"imageId"`
+}
+
+// GetPendingTasks はログインユーザーのフレンドが行った承認待ちタスク一覧を取得する
+func GetPendingTasks(userID string) ([]TaskPendingResponse, error) {
+	friends, err := repositories.GetFriends(userID)
+	if err != nil {
+		logger.PrintErr("フレンド一覧の取得に失敗", "userID", userID, "error", err)
+		return []TaskPendingResponse{}, err
+	}
+
+	friendIDs := make([]string, 0, len(friends))
+	for _, f := range friends {
+		friendIDs = append(friendIDs, f.UserID)
+	}
+
+	rows, err := repositories.GetPendingTasksForFriends(friendIDs)
+	if err != nil {
+		logger.PrintErr("承認待ちタスクの取得に失敗", "userID", userID, "error", err)
+		return []TaskPendingResponse{}, err
+	}
+
+	result := make([]TaskPendingResponse, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, TaskPendingResponse{
+			TaskID:      row.TaskID,
+			UserID:      row.UserID,
+			TaskName:    row.TaskName,
+			Tag:         row.Tag,
+			Description: row.Description,
+			StartDate:   row.StartDate.Unix(),
+			EndTime:     row.EndTime.Unix(),
+			ImageID:     row.ImageID,
+		})
+	}
+
+	return result, nil
+}
+
 // 煽りメッセージの登録
 func PostTaskTauntMessage(userId string, friendId string, msg string) error {
 	// フレンド存在確認
