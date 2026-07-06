@@ -388,7 +388,7 @@ func validateTaskStatusUpdate(userID, taskID, status string) (models.Task, error
 			return models.Task{}, err
 		}
 
-		if friendShip.UserID == "" {
+		if friendShip == nil || friendShip.UserID == "" {
 			return models.Task{},
 				ErrTaskPermissionDenied
 		}
@@ -553,8 +553,6 @@ func chooseTrashTarget(userID string, targetUserID string, rescueUserIDs []model
 
 	return targetUserID, nil
 }
-
-
 
 func GetTaskImage(imageID string) (filePath string, contentType string, err error) {
 	candidates := []struct {
