@@ -90,10 +90,20 @@ func TestGetTasks(t *testing.T) {
 	}
 }
 
+// タスクテーブルを空にする（他のテストが作成したタスクの影響を排除する）
+func truncateTasks(t *testing.T) {
+	t.Helper()
+
+	if err := models.DB.Exec("TRUNCATE TABLE tasks").Error; err != nil {
+		t.Fatal(err)
+	}
+}
+
 // services.GetPendingTasksのテスト
 func TestGetPendingTasks(t *testing.T) {
 	truncateFriendShips(t)
 	truncateUsersAndRooms(t)
+	truncateTasks(t)
 
 	TestRegisterUser(t)
 
