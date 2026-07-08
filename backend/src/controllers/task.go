@@ -27,6 +27,22 @@ func GetTask(ctx echo.Context) error {
 	return ctx.JSON(200, tasks)
 }
 
+// 承認待ちタスク一覧取得のコントローラー
+func GetPendingTasksHandler(ctx echo.Context) error {
+	// ヘッダーからユーザーIDを取得
+	userId := ctx.Get("UserID").(string)
+
+	// サービスから承認待ちタスクを取得
+	tasks, err := services.GetPendingTasks(userId)
+	if err != nil {
+		return ctx.JSON(500, map[string]string{
+			"message": ErrTaskFetch,
+		})
+	}
+
+	return ctx.JSON(200, tasks)
+}
+
 type PostTaskTauntMessageRequest struct {
 	FriendID string `json:"friendId"`
 	Message  string `json:"message"`

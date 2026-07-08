@@ -51,6 +51,9 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 			task.PUT("/:id", controllers.PutTaskStatusHandler)
 		}
 
+		// 承認待ちタスク一覧取得
+		user.GET("/tasks/pending", controllers.GetPendingTasksHandler)
+
 		// タスク複数完了
 		user.POST("/tasks/complete", TempController)
 	}
