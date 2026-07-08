@@ -71,3 +71,19 @@ func UpdateUserLifestyle(ctx echo.Context) error {
 
 	return ctx.JSON(http.StatusOK, map[string]string{})
 }
+
+// UpdateUserSetting は PUT /app/user/setting のハンドラ
+func UpdateUserSetting(ctx echo.Context) error {
+	userId := ctx.Get("UserID").(string) // 認証ミドルウェアが格納したユーザーIDを取得
+
+	var req services.UserSettingRequest
+	if err := ctx.Bind(&req); err != nil { // リクエストボディをバインド
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
+	}
+
+	if err := services.UpdateUserSetting(userId, req); err != nil { // サービス層に処理を委譲
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]string{}) // Empty スキーマを返す
+}

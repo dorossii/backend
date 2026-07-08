@@ -27,7 +27,7 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		user.GET("/status", controllers.GetUserStatus)
 
 		// ユーザー情報の編集
-		user.PUT("/setting", TempController)
+		user.PUT("/setting", controllers.UpdateUserSetting)
 
 		// 生活環境情報の登録
 		user.POST("/lifestyle", controllers.CreateUserLifestyle)
