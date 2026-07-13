@@ -3,6 +3,8 @@ package seeds
 import (
 	"backend/logger"
 	"backend/models"
+
+	"gorm.io/gorm/clause"
 )
 
 
@@ -137,7 +139,7 @@ func baseTaskSeed() error {
         },
 	}	
 
-	return models.DB.Create(&baseTasks).Error
+	return models.DB.Create(&baseTasks).Clauses(clause.OnConflict{DoNothing: true}).Error
 
 }
 
