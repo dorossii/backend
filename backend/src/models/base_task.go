@@ -6,7 +6,7 @@ const (
 	TaskTagCleaning TaskTag = 0 // 掃除
 	TaskTagLaundry  TaskTag = 1 // 洗濯
 	TaskTagCooking  TaskTag = 2 // 料理
-	TaskTagTrash    TaskTag = 3 // ゴミ捨て
+	TaskTagAther    TaskTag = 4 // その他
 )
 
 type BaseTask struct {
