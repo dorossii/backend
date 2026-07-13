@@ -23,14 +23,17 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		// 初回ユーザー登録
 		user.POST("/register", controllers.RegisterUser)
 
+		// ホーム画面 - ユーザーステータス取得
+		user.GET("/status", controllers.GetUserStatus)
+
 		// ユーザー情報の編集
-		user.PUT("/setting", TempController)
+		user.PUT("/setting", controllers.UpdateUserSetting)
 
 		// 生活環境情報の登録
-		user.POST("/lifestyle", TempController)
+		user.POST("/lifestyle", controllers.CreateUserLifestyle)
 
 		// 生活環境情報の編集
-		user.PUT("/lifestyle", TempController)
+		user.PUT("/lifestyle", controllers.UpdateUserLifestyle)
 
 		// タスクグループ
 		task := user.Group("/task")
@@ -38,25 +41,25 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 			// タスク取得
 			task.GET("", controllers.GetTask)
 
-			// タスク詳細取得
-			task.GET("/:id", TempController)
-
 			// タスク写真のアップロード
 			task.POST("/:id/image", controllers.PostUploadImageHandler)
 
 			// タスク煽りメッセージ
 			task.POST("/message", controllers.PostTauntMessageHandler)
 
-			// 写真確認
-			task.GET("/:imageId/image", controllers.GetTaskImageHandler)
-
 			// タスクのステータス更新
 			task.PUT("/:id", controllers.PutTaskStatusHandler)
 		}
 
+		// 承認待ちタスク一覧取得
+		user.GET("/tasks/pending", controllers.GetPendingTasksHandler)
+
 		// タスク複数完了
 		user.POST("/tasks/complete", TempController)
 	}
+
+	// タスク写真確認（認証不要）
+	router.GET("/user/task/:imageId/image", controllers.GetTaskImageHandler)
 
 	// friendグループ
 	friend := router.Group("/friend", middlewares.RequireAuth)
@@ -78,6 +81,9 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 
 		// フレンド削除
 		friend.DELETE("/:id", controllers.DeleteFriend)
+
+		// 嫌がらせする人の取得
+		friend.GET("/attack", controllers.GetAttackerSettingsHandler)
 
 		// 嫌がらせする人の設定
 		friend.PUT("/attack", controllers.PostAttackerSettingsHandler)

@@ -2,7 +2,9 @@ FROM golang:1.26-bookworm as develop
 
 # git とかの依存関係をインストールする
 RUN apt update && \
-    apt install curl wget git -y
+    apt install curl wget git tzdata -y
+
+ENV TZ=Asia/Tokyo
 
 # 作業ディレクトリを設定
 WORKDIR /app
@@ -12,6 +14,8 @@ ENTRYPOINT [ "/bin/bash" ]
 
 # ビルド用のコンテナ
 FROM golang:1.26 as builder
+
+ENV TZ=Asia/Tokyo
 
 # 作業ディレクトリを設定
 WORKDIR /go/src/app
@@ -27,5 +31,7 @@ RUN CGO_ENABLED=0 go build -ldflags="-s -w" -trimpath -o /go/bin/app
 
 # 実行用のコンテナ
 FROM gcr.io/distroless/static-debian12 as release
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /go/bin/app /
+ENV TZ=Asia/Tokyo
 CMD ["/app"]

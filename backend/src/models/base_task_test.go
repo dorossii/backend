@@ -42,7 +42,7 @@ func TestBaseTask(t *testing.T) {
 			DifficultyLevel: 1,
 			DueTime:         3,
 			ImageFlag:       false,
-			Tags:            models.TaskTagTrash,
+			Tags:            models.TaskTagCleaning,
 		},
 	}
 

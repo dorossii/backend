@@ -128,6 +128,29 @@ type PostAttackerSettingsRequest struct {
 	TargetUser string `json:"TargetUser"`
 }
 
+// 嫌がらせする人を取得
+func GetAttackerSettingsHandler(ctx echo.Context) error {
+	userId := ctx.Get("UserID").(string)
+
+	attacker, err := services.GetAttackerSettings(userId)
+	if err != nil {
+		logger.PrintErr("GetAttackerSettingsHandler", err)
+
+		if errors.Is(err, services.ErrFriendNotFound) {
+			return ctx.JSON(http.StatusForbidden, echo.Map{
+				"error": "friend not found",
+			})
+		}
+
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "internal server error",
+		})
+	}
+
+	return ctx.JSON(http.StatusOK, echo.Map{
+		"TargetUser": attacker,
+	})
+}
 // 嫌がらせする人の設定
 func PostAttackerSettingsHandler(ctx echo.Context) error {
 	userId := ctx.Get("UserID").(string)
@@ -164,17 +187,15 @@ func PostAttackerSettingsHandler(ctx echo.Context) error {
 func PostRescuerSettingsHandler(ctx echo.Context) error {
 	userId := ctx.Get("UserID").(string)
 
-	var req struct {
-		TargetUsers []string `json:"TargetUsers"`
-	}
-	if err := ctx.Bind(&req); err != nil {
+	var targetUsers []string
+	if err := ctx.Bind(&targetUsers); err != nil {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{
 			"error": "invalid request",
 		})
 	}
-	
+
 	// ターゲットユーザーの設定
-	err := services.PostRescuerSettings(userId, req.TargetUsers)
+	err := services.PostRescuerSettings(userId, targetUsers)
 
 	if err != nil {
 		logger.PrintErr("PostRescuerSettingsHandler", err)
@@ -190,7 +211,5 @@ func PostRescuerSettingsHandler(ctx echo.Context) error {
 		})
 	}
 	
-	return ctx.JSON(http.StatusOK, echo.Map{
-		"message": "success",
-	})
+	return ctx.JSON(http.StatusOK, echo.Map{})
 }

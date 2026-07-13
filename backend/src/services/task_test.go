@@ -4,6 +4,7 @@ import (
 	"backend/batch"
 	"backend/models"
 	"backend/services"
+	"backend/utils"
 	"bytes"
 	"fmt"
 	"io"
@@ -24,7 +25,7 @@ func TestGetTasks(t *testing.T) {
 		t.Fatalf("テストユーザーの作成に失敗: %v", err)
 	}
 
-	//　ベースタスクの準備(DueTimeは日数単位)
+	// ベースタスクの準備(DueTimeは日数単位)
 	baseTasks := []models.BaseTask{
 		{
 			BaseID:          "base-001",
@@ -74,7 +75,7 @@ func TestGetTasks(t *testing.T) {
 		t.Errorf("タスクが見つかりません")
 	}
 
-	//取得したタスクの難易度が1から5の範囲内であることを確認
+	// 取得したタスクの難易度が1から5の範囲内であることを確認
 	for _, task := range tasks {
 		if task.DifficultyLevel < 1 || task.DifficultyLevel > 5 {
 			t.Errorf("タスクの難易度が不正です: %d", task.DifficultyLevel)
@@ -85,7 +86,517 @@ func TestGetTasks(t *testing.T) {
 
 	// 取得したタスクの内容を確認
 	for _, task := range tasks {
-		log.Printf("タスクID: %s, タスク名: %s, 期限: %s,難易度: %d", task.TaskID, task.TaskName, task.EndTime.Format("2006-01-02"), task.DifficultyLevel)
+		log.Printf("タスクID: %s, タスク名: %s, 期限: %s,難易度: %d", task.TaskID, task.TaskName, time.Unix(task.EndTime, 0).Format("2006-01-02"), task.DifficultyLevel)
+	}
+}
+
+// タスクテーブルを空にする（他のテストが作成したタスクの影響を排除する）
+func truncateTasks(t *testing.T) {
+	t.Helper()
+
+	if err := models.DB.Exec("TRUNCATE TABLE tasks").Error; err != nil {
+		t.Fatal(err)
+	}
+}
+
+// services.GetPendingTasksのテスト
+func TestGetPendingTasks(t *testing.T) {
+	truncateFriendShips(t)
+	truncateUsersAndRooms(t)
+	truncateTasks(t)
+
+	TestRegisterUser(t)
+
+	friend := models.FriendShips{
+		UserID:   "user-001",
+		FriendID: "user-002",
+		Status:   models.FriendStatusAccepted,
+	}
+	if err := models.DB.Create(&friend).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	baseTask := models.BaseTask{
+		BaseID:          "base-pending-001",
+		TaskName:        "部屋掃除",
+		DueTime:         1,
+		ImageFlag:       true,
+		Description:     "掃除して部屋をきれいにしよう",
+		DifficultyLevel: 2,
+		Tags:            0,
+	}
+	if err := models.DB.Create(&baseTask).Error; err != nil {
+		t.Fatalf("failed to create dummy base task: %v", err)
+	}
+
+	pendingTask := models.Task{
+		TaskID:    "task-pending-001",
+		BaseID:    baseTask.BaseID,
+		UserID:    "user-002",
+		Status:    models.TaskStatusPending,
+		StartTime: time.Now(),
+		EndTime:   time.Now().Add(24 * time.Hour),
+		ImageID:   "img-001",
+	}
+	if err := models.DB.Create(&pendingTask).Error; err != nil {
+		t.Fatalf("failed to create dummy pending task: %v", err)
+	}
+
+	// user-002自身が所有する未完了タスク（承認待ちではないので含まれないはず）
+	incompleteTask := models.Task{
+		TaskID:    "task-incomplete-001",
+		BaseID:    baseTask.BaseID,
+		UserID:    "user-002",
+		Status:    models.TaskStatusIncomplete,
+		StartTime: time.Now(),
+		EndTime:   time.Now().Add(24 * time.Hour),
+	}
+	if err := models.DB.Create(&incompleteTask).Error; err != nil {
+		t.Fatalf("failed to create dummy incomplete task: %v", err)
+	}
+
+	tasks, err := services.GetPendingTasks("user-001")
+	if err != nil {
+		t.Fatalf("GetPendingTasks failed: %v", err)
+	}
+
+	if len(tasks) != 1 {
+		t.Fatalf("expected 1 pending task, got %d", len(tasks))
+	}
+
+	if tasks[0].TaskID != "task-pending-001" {
+		t.Fatalf("unexpected taskId: %s", tasks[0].TaskID)
+	}
+	if tasks[0].UserID != "user-002" {
+		t.Fatalf("unexpected userId: %s", tasks[0].UserID)
+	}
+
+	// フレンドがいないユーザーは空配列（nilではない）が返る
+	emptyTasks, err := services.GetPendingTasks("user-003")
+	if err != nil {
+		t.Fatalf("GetPendingTasks failed: %v", err)
+	}
+	if emptyTasks == nil {
+		t.Fatalf("expected empty slice, got nil")
+	}
+	if len(emptyTasks) != 0 {
+		t.Fatalf("expected 0 pending tasks, got %d", len(emptyTasks))
+	}
+}
+
+// フレンドがpending状態のタスクを持っていない場合（incomplete/completeのみ）は空配列が返る
+func TestGetPendingTasks_FriendHasNoPendingTask(t *testing.T) {
+	truncateFriendShips(t)
+	truncateUsersAndRooms(t)
+	truncateTasks(t)
+
+	TestRegisterUser(t)
+
+	friend := models.FriendShips{
+		UserID:   "user-001",
+		FriendID: "user-002",
+		Status:   models.FriendStatusAccepted,
+	}
+	if err := models.DB.Create(&friend).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	baseTask := models.BaseTask{
+		BaseID:          "base-no-pending",
+		TaskName:        "部屋掃除",
+		DueTime:         1,
+		ImageFlag:       true,
+		Description:     "掃除して部屋をきれいにしよう",
+		DifficultyLevel: 2,
+		Tags:            0,
+	}
+	if err := models.DB.Create(&baseTask).Error; err != nil {
+		t.Fatalf("failed to create dummy base task: %v", err)
+	}
+
+	// フレンドの未完了タスク（承認待ちではない）
+	incompleteTask := models.Task{
+		TaskID:    "task-incomplete-only",
+		BaseID:    baseTask.BaseID,
+		UserID:    "user-002",
+		Status:    models.TaskStatusIncomplete,
+		StartTime: time.Now(),
+		EndTime:   time.Now().Add(24 * time.Hour),
+	}
+	if err := models.DB.Create(&incompleteTask).Error; err != nil {
+		t.Fatalf("failed to create dummy incomplete task: %v", err)
+	}
+
+	// フレンドの完了済みタスク
+	completeTask := models.Task{
+		TaskID:    "task-complete-only",
+		BaseID:    baseTask.BaseID,
+		UserID:    "user-002",
+		Status:    models.TaskStatusCompleted,
+		StartTime: time.Now(),
+		EndTime:   time.Now().Add(24 * time.Hour),
+	}
+	if err := models.DB.Create(&completeTask).Error; err != nil {
+		t.Fatalf("failed to create dummy complete task: %v", err)
+	}
+
+	tasks, err := services.GetPendingTasks("user-001")
+	if err != nil {
+		t.Fatalf("GetPendingTasks failed: %v", err)
+	}
+	if tasks == nil {
+		t.Fatalf("expected empty slice, got nil")
+	}
+	if len(tasks) != 0 {
+		t.Fatalf("expected 0 pending tasks, got %d", len(tasks))
+	}
+}
+
+// フレンドではないユーザーの承認待ちタスクは取得できない
+func TestGetPendingTasks_NonFriendTaskExcluded(t *testing.T) {
+	truncateFriendShips(t)
+	truncateUsersAndRooms(t)
+	truncateTasks(t)
+
+	TestRegisterUser(t)
+
+	// user-001とuser-002はフレンドだが、user-003とはフレンドではない
+	friend := models.FriendShips{
+		UserID:   "user-001",
+		FriendID: "user-002",
+		Status:   models.FriendStatusAccepted,
+	}
+	if err := models.DB.Create(&friend).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	baseTask := models.BaseTask{
+		BaseID:          "base-non-friend",
+		TaskName:        "部屋掃除",
+		DueTime:         1,
+		ImageFlag:       true,
+		Description:     "掃除して部屋をきれいにしよう",
+		DifficultyLevel: 2,
+		Tags:            0,
+	}
+	if err := models.DB.Create(&baseTask).Error; err != nil {
+		t.Fatalf("failed to create dummy base task: %v", err)
+	}
+
+	// フレンドではないuser-003の承認待ちタスク
+	nonFriendPendingTask := models.Task{
+		TaskID:    "task-non-friend-pending",
+		BaseID:    baseTask.BaseID,
+		UserID:    "user-003",
+		Status:    models.TaskStatusPending,
+		StartTime: time.Now(),
+		EndTime:   time.Now().Add(24 * time.Hour),
+		ImageID:   "img-non-friend",
+	}
+	if err := models.DB.Create(&nonFriendPendingTask).Error; err != nil {
+		t.Fatalf("failed to create dummy pending task: %v", err)
+	}
+
+	tasks, err := services.GetPendingTasks("user-001")
+	if err != nil {
+		t.Fatalf("GetPendingTasks failed: %v", err)
+	}
+	if len(tasks) != 0 {
+		t.Fatalf("expected 0 pending tasks (non-friend task must be excluded), got %d", len(tasks))
+	}
+}
+
+// フレンド申請中（Pending）や拒否済み（Rejected）の relationshipは友達とみなされず、タスクも取得されない
+func TestGetPendingTasks_FriendShipNotAcceptedExcluded(t *testing.T) {
+	truncateFriendShips(t)
+	truncateUsersAndRooms(t)
+	truncateTasks(t)
+
+	TestRegisterUser(t)
+
+	// user-001 <-> user-002 は申請中
+	pendingFriendShip := models.FriendShips{
+		UserID:   "user-001",
+		FriendID: "user-002",
+		Status:   models.FriendStatusPending,
+	}
+	if err := models.DB.Create(&pendingFriendShip).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	// user-001 <-> user-003 は拒否済み
+	rejectedFriendShip := models.FriendShips{
+		UserID:   "user-001",
+		FriendID: "user-003",
+		Status:   models.FriendStatusRejected,
+	}
+	if err := models.DB.Create(&rejectedFriendShip).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	baseTask := models.BaseTask{
+		BaseID:          "base-not-accepted",
+		TaskName:        "部屋掃除",
+		DueTime:         1,
+		ImageFlag:       true,
+		Description:     "掃除して部屋をきれいにしよう",
+		DifficultyLevel: 2,
+		Tags:            0,
+	}
+	if err := models.DB.Create(&baseTask).Error; err != nil {
+		t.Fatalf("failed to create dummy base task: %v", err)
+	}
+
+	pendingUserTask := models.Task{
+		TaskID:    "task-pending-friendship-pending",
+		BaseID:    baseTask.BaseID,
+		UserID:    "user-002",
+		Status:    models.TaskStatusPending,
+		StartTime: time.Now(),
+		EndTime:   time.Now().Add(24 * time.Hour),
+		ImageID:   "img-002",
+	}
+	if err := models.DB.Create(&pendingUserTask).Error; err != nil {
+		t.Fatalf("failed to create dummy pending task: %v", err)
+	}
+
+	rejectedUserTask := models.Task{
+		TaskID:    "task-pending-friendship-rejected",
+		BaseID:    baseTask.BaseID,
+		UserID:    "user-003",
+		Status:    models.TaskStatusPending,
+		StartTime: time.Now(),
+		EndTime:   time.Now().Add(24 * time.Hour),
+		ImageID:   "img-003",
+	}
+	if err := models.DB.Create(&rejectedUserTask).Error; err != nil {
+		t.Fatalf("failed to create dummy pending task: %v", err)
+	}
+
+	tasks, err := services.GetPendingTasks("user-001")
+	if err != nil {
+		t.Fatalf("GetPendingTasks failed: %v", err)
+	}
+	if len(tasks) != 0 {
+		t.Fatalf("expected 0 pending tasks (pending/rejected friendships must be excluded), got %d", len(tasks))
+	}
+}
+
+// フレンドシップが逆方向（friend_id = 自分）で登録されていても友達とみなされ、タスクが取得できる
+func TestGetPendingTasks_ReverseFriendShipDirection(t *testing.T) {
+	truncateFriendShips(t)
+	truncateUsersAndRooms(t)
+	truncateTasks(t)
+
+	TestRegisterUser(t)
+
+	// user-002がuser-001に対して申請し承認された体（friend_id側が自分）
+	friend := models.FriendShips{
+		UserID:   "user-002",
+		FriendID: "user-001",
+		Status:   models.FriendStatusAccepted,
+	}
+	if err := models.DB.Create(&friend).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	baseTask := models.BaseTask{
+		BaseID:          "base-reverse",
+		TaskName:        "部屋掃除",
+		DueTime:         1,
+		ImageFlag:       true,
+		Description:     "掃除して部屋をきれいにしよう",
+		DifficultyLevel: 2,
+		Tags:            0,
+	}
+	if err := models.DB.Create(&baseTask).Error; err != nil {
+		t.Fatalf("failed to create dummy base task: %v", err)
+	}
+
+	pendingTask := models.Task{
+		TaskID:    "task-reverse-pending",
+		BaseID:    baseTask.BaseID,
+		UserID:    "user-002",
+		Status:    models.TaskStatusPending,
+		StartTime: time.Now(),
+		EndTime:   time.Now().Add(24 * time.Hour),
+		ImageID:   "img-reverse",
+	}
+	if err := models.DB.Create(&pendingTask).Error; err != nil {
+		t.Fatalf("failed to create dummy pending task: %v", err)
+	}
+
+	tasks, err := services.GetPendingTasks("user-001")
+	if err != nil {
+		t.Fatalf("GetPendingTasks failed: %v", err)
+	}
+	if len(tasks) != 1 {
+		t.Fatalf("expected 1 pending task via reverse friendship, got %d", len(tasks))
+	}
+	if tasks[0].TaskID != "task-reverse-pending" {
+		t.Fatalf("unexpected taskId: %s", tasks[0].TaskID)
+	}
+}
+
+// 複数フレンドのうち、承認待ちタスクを持つフレンドの分だけ正しく返る
+func TestGetPendingTasks_MultipleFriendsMixedStatus(t *testing.T) {
+	truncateFriendShips(t)
+	truncateUsersAndRooms(t)
+	truncateTasks(t)
+
+	TestRegisterUser(t)
+
+	// user-001はuser-002、user-003の両方とフレンド
+	friendWith002 := models.FriendShips{
+		UserID:   "user-001",
+		FriendID: "user-002",
+		Status:   models.FriendStatusAccepted,
+	}
+	if err := models.DB.Create(&friendWith002).Error; err != nil {
+		t.Fatal(err)
+	}
+	friendWith003 := models.FriendShips{
+		UserID:   "user-001",
+		FriendID: "user-003",
+		Status:   models.FriendStatusAccepted,
+	}
+	if err := models.DB.Create(&friendWith003).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	baseTask := models.BaseTask{
+		BaseID:          "base-mixed",
+		TaskName:        "部屋掃除",
+		DueTime:         1,
+		ImageFlag:       true,
+		Description:     "掃除して部屋をきれいにしよう",
+		DifficultyLevel: 2,
+		Tags:            0,
+	}
+	if err := models.DB.Create(&baseTask).Error; err != nil {
+		t.Fatalf("failed to create dummy base task: %v", err)
+	}
+
+	// user-002は承認待ちタスクを持つ
+	pendingTask := models.Task{
+		TaskID:    "task-mixed-pending",
+		BaseID:    baseTask.BaseID,
+		UserID:    "user-002",
+		Status:    models.TaskStatusPending,
+		StartTime: time.Now(),
+		EndTime:   time.Now().Add(24 * time.Hour),
+		ImageID:   "img-mixed",
+	}
+	if err := models.DB.Create(&pendingTask).Error; err != nil {
+		t.Fatalf("failed to create dummy pending task: %v", err)
+	}
+
+	// user-003は未完了タスクのみ（承認待ちではない）
+	incompleteTask := models.Task{
+		TaskID:    "task-mixed-incomplete",
+		BaseID:    baseTask.BaseID,
+		UserID:    "user-003",
+		Status:    models.TaskStatusIncomplete,
+		StartTime: time.Now(),
+		EndTime:   time.Now().Add(24 * time.Hour),
+	}
+	if err := models.DB.Create(&incompleteTask).Error; err != nil {
+		t.Fatalf("failed to create dummy incomplete task: %v", err)
+	}
+
+	tasks, err := services.GetPendingTasks("user-001")
+	if err != nil {
+		t.Fatalf("GetPendingTasks failed: %v", err)
+	}
+	if len(tasks) != 1 {
+		t.Fatalf("expected 1 pending task, got %d", len(tasks))
+	}
+	if tasks[0].TaskID != "task-mixed-pending" {
+		t.Fatalf("unexpected taskId: %s", tasks[0].TaskID)
+	}
+	if tasks[0].UserID != "user-002" {
+		t.Fatalf("unexpected userId: %s", tasks[0].UserID)
+	}
+}
+
+// レスポンスの各フィールドが正しくマッピングされていることを確認する
+func TestGetPendingTasks_ResponseFieldsMapping(t *testing.T) {
+	truncateFriendShips(t)
+	truncateUsersAndRooms(t)
+	truncateTasks(t)
+
+	TestRegisterUser(t)
+
+	friend := models.FriendShips{
+		UserID:   "user-001",
+		FriendID: "user-002",
+		Status:   models.FriendStatusAccepted,
+	}
+	if err := models.DB.Create(&friend).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	baseTask := models.BaseTask{
+		BaseID:          "base-fields",
+		TaskName:        "洗濯物を干す",
+		DueTime:         2,
+		ImageFlag:       false,
+		Description:     "洗濯物を干すのを忘れないようにしよう",
+		DifficultyLevel: 4,
+		Tags:            3,
+	}
+	if err := models.DB.Create(&baseTask).Error; err != nil {
+		t.Fatalf("failed to create dummy base task: %v", err)
+	}
+
+	startTime := time.Now().Truncate(time.Second)
+	endTime := startTime.Add(24 * time.Hour)
+
+	pendingTask := models.Task{
+		TaskID:    "task-fields",
+		BaseID:    baseTask.BaseID,
+		UserID:    "user-002",
+		Status:    models.TaskStatusPending,
+		StartTime: startTime,
+		EndTime:   endTime,
+		ImageID:   "img-fields",
+	}
+	if err := models.DB.Create(&pendingTask).Error; err != nil {
+		t.Fatalf("failed to create dummy pending task: %v", err)
+	}
+
+	tasks, err := services.GetPendingTasks("user-001")
+	if err != nil {
+		t.Fatalf("GetPendingTasks failed: %v", err)
+	}
+	if len(tasks) != 1 {
+		t.Fatalf("expected 1 pending task, got %d", len(tasks))
+	}
+
+	got := tasks[0]
+	if got.TaskID != "task-fields" {
+		t.Fatalf("unexpected TaskID: %s", got.TaskID)
+	}
+	if got.UserID != "user-002" {
+		t.Fatalf("unexpected UserID: %s", got.UserID)
+	}
+	if got.TaskName != "洗濯物を干す" {
+		t.Fatalf("unexpected TaskName: %s", got.TaskName)
+	}
+	if got.Tag != 3 {
+		t.Fatalf("unexpected Tag: %d", got.Tag)
+	}
+	if got.Description != "洗濯物を干すのを忘れないようにしよう" {
+		t.Fatalf("unexpected Description: %s", got.Description)
+	}
+	if got.StartDate != startTime.Unix() {
+		t.Fatalf("unexpected StartDate: got %d, want %d", got.StartDate, startTime.Unix())
+	}
+	if got.EndTime != endTime.Unix() {
+		t.Fatalf("unexpected EndTime: got %d, want %d", got.EndTime, endTime.Unix())
+	}
+	if got.ImageID != "img-fields" {
+		t.Fatalf("unexpected ImageID: %s", got.ImageID)
 	}
 }
 
@@ -270,9 +781,9 @@ func TestPostUploadImage_JPEG(t *testing.T) {
 		TaskID:    "task-jpeg",
 		BaseID:    "base-001",
 		UserID:    "user-001",
-		Status:    models.TaskStatusImcomplete,
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		Status:    models.TaskStatusIncomplete,
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -318,9 +829,9 @@ func TestPostUploadImage_ReplaceImage(t *testing.T) {
 		BaseID:    "base-001",
 		UserID:    "user-001",
 		ImageID:   "old-image.jpg",
-		Status:    models.TaskStatusImcomplete,
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		Status:    models.TaskStatusIncomplete,
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -378,7 +889,7 @@ func TestPostUploadImage_TaskNotFound(t *testing.T) {
 		t.Fatal("expected error but got nil")
 	}
 
-		if err != services.ErrTaskNotFound {
+	if err != services.ErrTaskNotFound {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -393,9 +904,9 @@ func TestPostUploadImage_PermissionDenied(t *testing.T) {
 		TaskID:    "task-other-user",
 		BaseID:    "base-001",
 		UserID:    "user-999",
-		Status:    models.TaskStatusImcomplete,
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		Status:    models.TaskStatusIncomplete,
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -432,9 +943,9 @@ func TestPostUploadImage_UnsupportedImageType(t *testing.T) {
 		TaskID:    "task-invalid-image",
 		BaseID:    "base-001",
 		UserID:    "user-001",
-		Status:    models.TaskStatusImcomplete,
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		Status:    models.TaskStatusIncomplete,
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -460,7 +971,6 @@ func TestPostUploadImage_UnsupportedImageType(t *testing.T) {
 	}
 }
 
-
 // タスクステータス更新(完了: 正常系)
 func TestPutTaskStatus_Complete(t *testing.T) {
 	TestRegisterUser(t)
@@ -469,9 +979,9 @@ func TestPutTaskStatus_Complete(t *testing.T) {
 		TaskID:    "task-Complete",
 		BaseID:    "base-001",
 		UserID:    "user-001",
-		Status:    models.TaskStatusImcomplete,
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		Status:    models.TaskStatusIncomplete,
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -537,9 +1047,9 @@ func TestPutTaskStatus_Expired(t *testing.T) {
 		TaskID:    "task-Expired",
 		BaseID:    "base-001",
 		UserID:    "user-001",
-		Status:    models.TaskStatusImcomplete,
-		StartTime: time.Now().Add(-2 * time.Hour),
-		EndTime:   time.Now().Add(-1 * time.Hour), // 既に終了
+		Status:    models.TaskStatusIncomplete,
+		StartTime: utils.NowJST().Add(-2 * time.Hour),
+		EndTime:   utils.NowJST().Add(-1 * time.Hour), // 既に終了
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -569,9 +1079,9 @@ func TestPutTaskStatus_Pending(t *testing.T) {
 		TaskID:       "task-pending",
 		BaseID:       "base-001",
 		UserID:       "user-001",
-		Status:       models.TaskStatusImcomplete,
-		StartTime:    time.Now().Add(-1 * time.Hour),
-		EndTime:      time.Now().Add(1 * time.Hour),
+		Status:       models.TaskStatusIncomplete,
+		StartTime:    utils.NowJST().Add(-1 * time.Hour),
+		EndTime:      utils.NowJST().Add(1 * time.Hour),
 		ImageID:      "image-001",
 		RequireImage: false,
 	}
@@ -623,11 +1133,11 @@ func TestPutTaskStatus_Pending_RequireImageButNoImageID(t *testing.T) {
 		TaskID:       "task-pending-no-image",
 		BaseID:       "base-001",
 		UserID:       "user-001",
-		Status:       models.TaskStatusImcomplete,
-		StartTime:    time.Now().Add(-1 * time.Hour),
-		EndTime:      time.Now().Add(1 * time.Hour),
-		ImageID:      "",     // 画像なし
-		RequireImage: true,   // 画像必須
+		Status:       models.TaskStatusIncomplete,
+		StartTime:    utils.NowJST().Add(-1 * time.Hour),
+		EndTime:      utils.NowJST().Add(1 * time.Hour),
+		ImageID:      "",   // 画像なし
+		RequireImage: true, // 画像必須
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -653,14 +1163,15 @@ func TestPutTaskStatus_Pending_RequireImageButNoImageID(t *testing.T) {
 // タスクステータス更新(未完了: 正常系)
 func TestPutTaskStatus_Incomplete(t *testing.T) {
 	TestRegisterUser(t)
+	seedFriend(t)
 
 	task := models.Task{
 		TaskID:    "task-incomplete",
 		BaseID:    "base-001",
 		UserID:    "user-001",
 		Status:    models.TaskStatusPending, // Pendingから差し戻し
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -670,7 +1181,7 @@ func TestPutTaskStatus_Incomplete(t *testing.T) {
 	message := "普通に汚い"
 
 	resp, err := services.PutTaskStatus(
-		"user-001",
+		"user-002",
 		"task-incomplete",
 		services.TaskStatusIncomplete,
 		message,
@@ -692,7 +1203,7 @@ func TestPutTaskStatus_Incomplete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if updatedTask.Status != models.TaskStatusImcomplete {
+	if updatedTask.Status != models.TaskStatusIncomplete {
 		t.Fatalf(
 			"unexpected status: %v",
 			updatedTask.Status,
@@ -710,14 +1221,15 @@ func TestPutTaskStatus_Incomplete(t *testing.T) {
 // タスクステータス更新(未完了: 認証待ち以外から戻そうとする)
 func TestPutTaskStatus_Incomplete_NotPending(t *testing.T) {
 	TestRegisterUser(t)
+	seedFriend(t)
 
 	task := models.Task{
 		TaskID:    "task-incomplete-not-pending",
 		BaseID:    "base-001",
 		UserID:    "user-001",
 		Status:    models.TaskStatusCompleted,
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -725,7 +1237,7 @@ func TestPutTaskStatus_Incomplete_NotPending(t *testing.T) {
 	}
 
 	_, err := services.PutTaskStatus(
-		"user-001",
+		"user-002",
 		"task-incomplete-not-pending",
 		services.TaskStatusIncomplete,
 		"差し戻し理由",
@@ -735,7 +1247,7 @@ func TestPutTaskStatus_Incomplete_NotPending(t *testing.T) {
 		t.Fatal("expected error but got nil")
 	}
 
-	if err != services.ErrTaskStatusAlreadyUpdated {
+	if err != services.ErrInvalidTaskState {
 		t.Fatalf(
 			"unexpected error: %v",
 			err,
@@ -746,14 +1258,15 @@ func TestPutTaskStatus_Incomplete_NotPending(t *testing.T) {
 // タスクステータス更新(未完了: 拒否理由なし)
 func TestPutTaskStatus_Incomplete_EmptyMessage(t *testing.T) {
 	TestRegisterUser(t)
+	seedFriend(t)
 
 	task := models.Task{
 		TaskID:    "task-incomplete-empty-message",
 		BaseID:    "base-001",
 		UserID:    "user-001",
 		Status:    models.TaskStatusPending,
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -761,7 +1274,7 @@ func TestPutTaskStatus_Incomplete_EmptyMessage(t *testing.T) {
 	}
 
 	_, err := services.PutTaskStatus(
-		"user-001",
+		"user-002",
 		"task-incomplete-empty-message",
 		services.TaskStatusIncomplete,
 		"",
@@ -787,9 +1300,9 @@ func TestPutTaskStatus_InvalidStatus(t *testing.T) {
 		TaskID:    "task-invalid-status",
 		BaseID:    "base-001",
 		UserID:    "user-001",
-		Status:    models.TaskStatusImcomplete,
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		Status:    models.TaskStatusIncomplete,
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -815,6 +1328,41 @@ func TestPutTaskStatus_InvalidStatus(t *testing.T) {
 	}
 }
 
+// タスクステータス更新(同じステータスへの更新完了)
+func TestPutTaskStatus_AlreadyUpdated(t *testing.T) {
+	TestRegisterUser(t)
+
+	task := models.Task{
+		TaskID:    "task-already-updated",
+		BaseID:    "base-001",
+		UserID:    "user-001",
+		Status:    models.TaskStatusPending,
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
+	}
+
+	if err := models.DB.Create(&task).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := services.PutTaskStatus(
+		"user-001",
+		"task-already-updated",
+		services.TaskStatusPending,
+		"",
+	)
+
+	if err == nil {
+		t.Fatal("expected error but got nil")
+	}
+
+	if err != services.ErrInvalidTaskState {
+		t.Fatalf(
+			"unexpected error: %v",
+			err,
+		)
+	}
+}
 
 // 画像取得(正常系: JPEG)
 func TestGetTaskImage_JPEG(t *testing.T) {
@@ -826,8 +1374,8 @@ func TestGetTaskImage_JPEG(t *testing.T) {
 		BaseID:    "base-001",
 		UserID:    "user-001",
 		Status:    models.TaskStatusPending,
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
 	}
 
 	if err := models.DB.Create(&task).Error; err != nil {
@@ -875,38 +1423,4 @@ func TestGetTaskImage_NotFound(t *testing.T) {
 	}
 }
 
-// タスクステータス更新(同じステータスへの更新完了)
-func TestPutTaskStatus_AlreadyUpdated(t *testing.T) {
-	TestRegisterUser(t)
 
-	task := models.Task{
-		TaskID:    "task-already-updated",
-		BaseID:    "base-001",
-		UserID:    "user-001",
-		Status:    models.TaskStatusPending,
-		StartTime: time.Now().Add(-1 * time.Hour),
-		EndTime:   time.Now().Add(1 * time.Hour),
-	}
-
-	if err := models.DB.Create(&task).Error; err != nil {
-		t.Fatal(err)
-	}
-
-	_, err := services.PutTaskStatus(
-		"user-001",
-		"task-already-updated",
-		services.TaskStatusPending,
-		"",
-	)
-
-	if err == nil {
-		t.Fatal("expected error but got nil")
-	}
-
-	if err != services.ErrTaskStatusAlreadyUpdated {
-		t.Fatalf(
-			"unexpected error: %v",
-			err,
-		)
-	}
-}

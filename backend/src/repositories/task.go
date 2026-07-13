@@ -8,21 +8,21 @@ import (
 )
 
 type TaskResponse struct {
-	TaskID          string    `json:"taskId"`
-	UserID          string    `json:"userId"`
-	TaskName        string    `json:"taskName"`
-	Status          int       `json:"status"`
-	Tag             int       `json:"tag"`
-	DifficultyLevel int       `json:"level"`
-	Description     string    `json:"description"`
-	StartDate       time.Time `json:"startDate"` // JSONで startDate となるように調整
-	EndTime         time.Time `json:"endTime"`
-	ImageID         string    `json:"imageId"`
-	Message         string    `json:"message"`
+	TaskID          string   `json:"taskId"`
+	UserID          string   `json:"userId"`
+	TaskName        string   `json:"taskName"`
+	Status          int      `json:"status"`
+	Tag             int      `json:"tag"`
+	DifficultyLevel int      `json:"level"`
+	Description     string   `json:"description"`
+	StartDate       int64    `json:"startDate"`
+	EndTime         int64    `json:"endTime"`
+	ImageID         string   `json:"imageId"`
+	Message         string   `json:"message"`
 }
 
 func GetUserTasks(userID string) ([]TaskResponse, error) {
-	var results []TaskResponse
+	results := []TaskResponse{}
 
 	err := models.DB.Model(&models.Task{}).
 		Select(`
@@ -33,13 +33,52 @@ func GetUserTasks(userID string) ([]TaskResponse, error) {
             base_tasks.tags, 
             base_tasks.difficulty_level,
             base_tasks.description, 
-            tasks.start_time as start_date, 
-            tasks.end_time, 
+            CAST(UNIX_TIMESTAMP(tasks.start_time) AS SIGNED) as start_date, 
+            CAST(UNIX_TIMESTAMP(tasks.end_time) AS SIGNED) as end_time, 
             tasks.image_id,
             tasks.message
         `).
 		Joins("JOIN base_tasks ON tasks.base_id = base_tasks.base_id").
 		Where("tasks.user_id = ?", userID).
+		Scan(&results).Error
+
+	return results, err
+}
+
+// PendingTaskRow は承認待ちタスク取得のScan用中間構造体
+type PendingTaskRow struct {
+	TaskID      string
+	UserID      string
+	TaskName    string
+	Tag         int
+	Description string
+	StartDate   time.Time
+	EndTime     time.Time
+	ImageID     string
+}
+
+// GetPendingTasksForFriends は friendIDs が所有する Status = Pending のタスク一覧を取得する
+func GetPendingTasksForFriends(friendIDs []string) ([]PendingTaskRow, error) {
+	var results []PendingTaskRow
+
+	if len(friendIDs) == 0 {
+		return results, nil
+	}
+
+	err := models.DB.Model(&models.Task{}).
+		Select(`
+            tasks.task_id,
+            tasks.user_id,
+            base_tasks.task_name,
+            base_tasks.tags AS tag,
+            base_tasks.description,
+            tasks.start_time as start_date,
+            tasks.end_time,
+            tasks.image_id
+        `).
+		Joins("JOIN base_tasks ON tasks.base_id = base_tasks.base_id").
+		Where("tasks.user_id IN ?", friendIDs).
+		Where("tasks.status = ?", models.TaskStatusPending).
 		Scan(&results).Error
 
 	return results, err

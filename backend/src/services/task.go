@@ -4,6 +4,7 @@ import (
 	"backend/logger"
 	"backend/models"
 	"backend/repositories"
+	"backend/utils"
 	"net/http"
 
 	"errors"
@@ -19,12 +20,12 @@ import (
 )
 
 var (
-	ErrTaskNotFound             = errors.New("タスクが見つかりません")
-	ErrInvalidTaskStatus        = errors.New("無効なタスクステータスです")
-	ErrInvalidRequest           = errors.New("必要なパラメータの不足です")
-	ErrTaskExpired              = errors.New("タスクの有効期間外です")
-	ErrTaskStatusAlreadyUpdated = errors.New("すでにタスクステータスが更新されています")
-	ErrTaskPermissionDenied     = errors.New("タスクを操作する権限がありません")
+	ErrTaskNotFound         = errors.New("タスクが見つかりません")
+	ErrInvalidTaskStatus    = errors.New("無効なタスクステータスです")
+	ErrInvalidRequest       = errors.New("必要なパラメータの不足です")
+	ErrTaskExpired          = errors.New("タスクの有効期間外です")
+	ErrInvalidTaskState     = errors.New("不正な状態遷移です")
+	ErrTaskPermissionDenied = errors.New("タスクを操作する権限がありません")
 
 	ErrUnsupportedImageType = errors.New("対応していない画像形式です")
 	ErrEmptyImageFile       = errors.New("空の画像ファイルです")
@@ -37,6 +38,54 @@ func GetTasks(userID string) ([]repositories.TaskResponse, error) {
 		return []repositories.TaskResponse{}, err
 	}
 	return tasks, nil
+}
+
+// TaskPendingResponse は GET /user/tasks/pending のレスポンス要素
+type TaskPendingResponse struct {
+	TaskID      string `json:"taskId"`
+	UserID      string `json:"userId"`
+	TaskName    string `json:"taskName"`
+	Tag         int    `json:"tag"`
+	Description string `json:"description"`
+	StartDate   int64  `json:"startDate"`
+	EndTime     int64  `json:"endTime"`
+	ImageID     string `json:"imageId"`
+}
+
+// GetPendingTasks はログインユーザーのフレンドが行った承認待ちタスク一覧を取得する
+func GetPendingTasks(userID string) ([]TaskPendingResponse, error) {
+	friends, err := repositories.GetFriends(userID)
+	if err != nil {
+		logger.PrintErr("フレンド一覧の取得に失敗", "userID", userID, "error", err)
+		return []TaskPendingResponse{}, err
+	}
+
+	friendIDs := make([]string, 0, len(friends))
+	for _, f := range friends {
+		friendIDs = append(friendIDs, f.UserID)
+	}
+
+	rows, err := repositories.GetPendingTasksForFriends(friendIDs)
+	if err != nil {
+		logger.PrintErr("承認待ちタスクの取得に失敗", "userID", userID, "error", err)
+		return []TaskPendingResponse{}, err
+	}
+
+	result := make([]TaskPendingResponse, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, TaskPendingResponse{
+			TaskID:      row.TaskID,
+			UserID:      row.UserID,
+			TaskName:    row.TaskName,
+			Tag:         row.Tag,
+			Description: row.Description,
+			StartDate:   row.StartDate.Unix(),
+			EndTime:     row.EndTime.Unix(),
+			ImageID:     row.ImageID,
+		})
+	}
+
+	return result, nil
 }
 
 // 煽りメッセージの登録
@@ -57,7 +106,7 @@ func PostTaskTauntMessage(userId string, friendId string, msg string) error {
 		UserID:     userId,
 		SenderID:   friendId,
 		Title:      msg,
-		NotifiedAt: time.Now(),
+		NotifiedAt: utils.NowJST(),
 	}
 
 	err = repositories.CreateRemindNotiec(notice)
@@ -186,7 +235,7 @@ const GarbagePower = 18 // TODO: 難易度1 = 18p汚さ減る
 func ParseTaskStatus(s string) (models.TaskStatus, error) {
 	switch s {
 	case TaskStatusIncomplete:
-		return models.TaskStatusImcomplete, nil
+		return models.TaskStatusIncomplete, nil
 
 	case TaskStatusPending:
 		return models.TaskStatusPending, nil
@@ -201,39 +250,11 @@ func ParseTaskStatus(s string) (models.TaskStatus, error) {
 
 // 　タスクステータス更新(完了•未完了)
 func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusResponse, error) {
-	task, err := repositories.GetTask(taskID)
+
+	// タスクを更新できるのか検証
+	task, err := validateTaskStatusUpdate(userID, taskID, status)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return PutTaskStatusResponse{}, ErrTaskNotFound
-		}
 		return PutTaskStatusResponse{}, err
-	}
-
-	// タスク所有者 or フレンドのみ操作可能
-	if task.UserID != userID {
-		friendShip, err := repositories.GetFriendShipAny(
-			userID,
-			task.UserID,
-		)
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return PutTaskStatusResponse{},
-					ErrTaskPermissionDenied
-			}
-
-			return PutTaskStatusResponse{}, err
-		}
-
-		if friendShip.UserID == "" {
-			return PutTaskStatusResponse{},
-				ErrTaskPermissionDenied
-		}
-	}
-
-	// タスクの有効期間 検証
-	now := time.Now()
-	if now.Before(task.StartTime) || now.After(task.EndTime) {
-		return PutTaskStatusResponse{}, ErrTaskExpired
 	}
 
 	newStatus, err := ParseTaskStatus(status)
@@ -241,22 +262,20 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		return PutTaskStatusResponse{}, err
 	}
 
-	if task.Status == newStatus {
-		return PutTaskStatusResponse{},
-			ErrTaskStatusAlreadyUpdated
+	// タスクのステータスを変更できる状況なのか検証
+	actor := "owner"
+
+	if task.UserID != userID {
+		actor = "friend"
 	}
 
-	if task.Status == models.TaskStatusCompleted &&
-		newStatus != models.TaskStatusCompleted {
-		return PutTaskStatusResponse{},
-			ErrTaskStatusAlreadyUpdated
+	err = validateTaskTransition(task, actor, newStatus, message)
+	if err != nil {
+		return PutTaskStatusResponse{}, err
 	}
 
-	// レスキューに設定されているユーザーの保存
-	var rescueUserIDs []models.HelpTargets
-
-	switch status {
-	case TaskStatusComplete:
+	switch newStatus {
+	case models.TaskStatusCompleted:
 		tx := models.DB.Begin()
 		defer tx.Rollback()
 
@@ -269,86 +288,22 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			return PutTaskStatusResponse{}, err
 		}
 
-		// TODO:渡してる数字がintなのは許して後修正する
 		err = repositories.UpdateTaskStatus(tx, taskID, models.TaskStatusCompleted)
 		if err != nil {
 			return PutTaskStatusResponse{}, err
 		}
+		// レスキューに設定されているユーザーの保存
+		var rescueUserIDs []models.HelpTargets
 
-		user, err := repositories.GetUser(userID)
-		if err != nil {
-			return PutTaskStatusResponse{}, err
-		}
-
-		difficultyLevel := baseTask.DifficultyLevel * GarbagePower // 汚さ数値の計算
-
-		// 自分の汚さの更新
-		err = repositories.UpdateDirtLevel(tx, userID, -difficultyLevel)
-		if err != nil {
-			return PutTaskStatusResponse{}, err
-		}
-
-		// 嫌がらせ相手の選出
-		targetUserID := user.TargetUser
-
-		// レスキュー対象除外
 		rescueUserIDs, err = repositories.GetRescueUserIDs(userID)
 		if err != nil {
 			return PutTaskStatusResponse{}, err
 		}
 
-		rescueMap := make(map[string]bool)
-
-		for _, id := range rescueUserIDs {
-			rescueMap[id.FriendID] = true
-		}
-
-		if targetUserID != "" {
-			// 指定ターゲットがレスキュー対象なら再抽選
-			if rescueMap[targetUserID] {
-				targetUserID = ""
-			}
-		}
-
-		if targetUserID == "" {
-			friends, err := repositories.GetFriends(userID)
-			if err != nil {
-				return PutTaskStatusResponse{}, err
-			}
-
-			var candidates []string
-
-			for _, friend := range friends {
-				if !rescueMap[friend.UserID] {
-					candidates = append(candidates, friend.UserID)
-				}
-			}
-
-			if len(candidates) > 0 {
-				targetUserID = candidates[rand.Intn(len(candidates))]
-			}
-		}
-
-		// 相手の汚さの更新
-		if targetUserID != "" {
-			err = repositories.UpdateDirtLevel(tx, targetUserID, difficultyLevel)
-			if err != nil {
-				return PutTaskStatusResponse{}, err
-			}
-
-			// 汚した相手に通知処理
-			notice := &models.TrashNotice{
-				NoticeID:   uuid.NewString(),
-				SenderID:   userID,
-				ReceiverID: targetUserID,
-				Count:      baseTask.DifficultyLevel, // 難易度=ゴミの数
-				CreatedAt:  time.Time{},
-			}
-
-			err = repositories.CreateTrashNotice(tx, notice)
-			if err != nil {
-				return PutTaskStatusResponse{}, err
-			}
+		// 汚さ更新
+		user, dirtAmount, err := applyTaskCompletionEffect(tx, userID, baseTask, rescueUserIDs)
+		if err != nil {
+			return PutTaskStatusResponse{}, err
 		}
 
 		// TODO: レスキュー処理
@@ -362,7 +317,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		}
 
 		if len(validRescueUsers) > 0 {
-			reduceAmount := difficultyLevel / len(validRescueUsers)
+			reduceAmount := dirtAmount / len(validRescueUsers)
 
 			for _, rescueUser := range validRescueUsers {
 				err := repositories.UpdateDirtLevel(
@@ -377,7 +332,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 		}
 
 		lastCompleted := user.LastTaskCompletedAt
-		now := time.Now()
+		now := utils.NowJST()
 
 		diffDays := -1
 
@@ -412,7 +367,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			RequireImage: false,
 		}, nil
 
-	case TaskStatusPending:
+	case models.TaskStatusPending:
 		// 認証待ち処理
 		if task.RequireImage && task.ImageID == "" {
 			return PutTaskStatusResponse{}, ErrInvalidRequest
@@ -435,20 +390,12 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			RequireImage: false,
 		}, nil
 
-	case TaskStatusIncomplete:
+	case models.TaskStatusIncomplete:
 		tx := models.DB.Begin()
 		defer tx.Rollback()
 
 		// 未完了処理
-		if task.Status != models.TaskStatusPending {
-			return PutTaskStatusResponse{}, ErrTaskStatusAlreadyUpdated
-		}
-
-		if message == "" {
-			return PutTaskStatusResponse{}, ErrInvalidRequest
-		}
-
-		err = repositories.UpdateTaskStatus(tx, taskID, models.TaskStatusImcomplete)
+		err = repositories.UpdateTaskStatus(tx, taskID, models.TaskStatusIncomplete)
 		if err != nil {
 			return PutTaskStatusResponse{}, err
 		}
@@ -469,6 +416,193 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 	}
 
 	return PutTaskStatusResponse{}, nil
+}
+
+func validateTaskStatusUpdate(userID, taskID, status string) (models.Task, error) {
+	task, err := repositories.GetTask(taskID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return models.Task{}, ErrTaskNotFound
+		}
+		return models.Task{}, err
+	}
+
+	// タスク所有者 or フレンドのみ操作可能
+	if task.UserID != userID {
+		friendShip, err := repositories.GetFriendShipAny(userID, task.UserID)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return models.Task{},
+					ErrTaskPermissionDenied
+			}
+
+			return models.Task{}, err
+		}
+
+		if friendShip == nil || friendShip.UserID == "" {
+			return models.Task{},
+				ErrTaskPermissionDenied
+		}
+	}
+
+	// タスクの有効期間 検証
+	now := time.Now()
+	if now.Before(task.StartTime) || now.After(task.EndTime) {
+		return models.Task{}, ErrTaskExpired
+	}
+
+	return task, nil
+}
+
+type TransitionRule struct {
+	Actor          string
+	CurrentStatus  models.TaskStatus
+	NextStatus     models.TaskStatus
+	RequireImage   bool
+	RequireMessage bool
+}
+
+// 遷移ルール
+var taskTransitionRules = []TransitionRule{
+	{
+		Actor:         "owner",
+		CurrentStatus: models.TaskStatusIncomplete,
+		NextStatus:    models.TaskStatusCompleted,
+		RequireImage:  false,
+	},
+	{
+		Actor:         "owner",
+		CurrentStatus: models.TaskStatusIncomplete,
+		NextStatus:    models.TaskStatusPending,
+		RequireImage:  true,
+	},
+	{
+		Actor:         "friend",
+		CurrentStatus: models.TaskStatusPending,
+		NextStatus:    models.TaskStatusCompleted,
+	},
+	{
+		Actor:          "friend",
+		CurrentStatus:  models.TaskStatusPending,
+		NextStatus:     models.TaskStatusIncomplete,
+		RequireMessage: true,
+	},
+}
+
+func validateTaskTransition(task models.Task, actor string, nextStatus models.TaskStatus, message string) error {
+
+	for _, rule := range taskTransitionRules {
+
+		if rule.Actor != actor {
+			continue
+		}
+
+		if rule.CurrentStatus != task.Status {
+			continue
+		}
+
+		if rule.NextStatus != nextStatus {
+			continue
+		}
+
+		// 画像必須
+		if rule.RequireImage &&
+			task.RequireImage &&
+			task.ImageID == "" {
+			return ErrInvalidRequest
+		}
+
+		// メッセージ必須
+		if rule.RequireMessage &&
+			message == "" {
+			return ErrInvalidRequest
+		}
+
+		return nil
+	}
+
+	return ErrInvalidTaskState
+}
+
+// 汚さ更新
+func applyTaskCompletionEffect(tx *gorm.DB, userID string, baseTask models.BaseTask, rescueUserIDs []models.HelpTargets) (models.User, int, error) {
+	user, err := repositories.GetUser(userID)
+	if err != nil {
+		return models.User{}, 0, err
+	}
+
+	dirtAmount := baseTask.DifficultyLevel * GarbagePower
+
+	// 自分の汚さ減少
+	err = repositories.UpdateDirtLevel(tx, userID, -dirtAmount)
+	if err != nil {
+		return models.User{}, 0, err
+	}
+
+	// 嫌がらせ相手の選出
+	targetUserID, err := chooseTrashTarget(userID, user.TargetUser, rescueUserIDs)
+	if err != nil {
+		return models.User{}, 0, err
+	}
+
+	if targetUserID == "" {
+		return *user, dirtAmount, nil
+	}
+
+	// 相手の汚さ増加
+	err = repositories.UpdateDirtLevel(
+		tx,
+		targetUserID,
+		dirtAmount,
+	)
+	if err != nil {
+		return models.User{}, 0, err
+	}
+
+	notice := &models.TrashNotice{
+		NoticeID:   uuid.NewString(),
+		SenderID:   userID,
+		ReceiverID: targetUserID,
+		Count:      baseTask.DifficultyLevel,
+	}
+
+	return *user, dirtAmount, repositories.CreateTrashNotice(tx, notice)
+}
+
+func chooseTrashTarget(userID string, targetUserID string, rescueUserIDs []models.HelpTargets) (string, error) {
+	rescueMap := make(map[string]bool)
+
+	for _, id := range rescueUserIDs {
+		rescueMap[id.FriendID] = true
+	}
+
+	if targetUserID != "" {
+		// 指定ターゲットがレスキュー対象なら再抽選
+		if rescueMap[targetUserID] {
+			targetUserID = ""
+		}
+	}
+
+	if targetUserID == "" {
+		friends, err := repositories.GetFriends(userID)
+		if err != nil {
+			return "", err
+		}
+
+		var candidates []string
+
+		for _, friend := range friends {
+			if !rescueMap[friend.UserID] {
+				candidates = append(candidates, friend.UserID)
+			}
+		}
+
+		if len(candidates) > 0 {
+			targetUserID = candidates[rand.Intn(len(candidates))]
+		}
+	}
+
+	return targetUserID, nil
 }
 
 func GetTaskImage(imageID string) (filePath string, contentType string, err error) {

@@ -71,4 +71,25 @@ func TestUserRoom(t *testing.T) {
 			result.HasVacuum,
 		)
 	}
+
+	if result.HasRobot != true { // デフォルト値(true)が適用されているか確認する
+		t.Fatalf(
+			"unexpected HasRobot: %v",
+			result.HasRobot,
+		)
+	}
+
+	if result.UseTableware != true { // デフォルト値(true)が適用されているか確認する
+		t.Fatalf(
+			"unexpected UseTableware: %v",
+			result.UseTableware,
+		)
+	}
+
+	if result.HasDishwasher != true { // デフォルト値(true)が適用されているか確認する
+		t.Fatalf(
+			"unexpected HasDishwasher: %v",
+			result.HasDishwasher,
+		)
+	}
 }

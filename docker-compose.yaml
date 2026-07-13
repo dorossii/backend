@@ -8,6 +8,8 @@ services:
         - 8947:8443
     restart: always
     tty: true
+    environment:
+      TZ: Asia/Tokyo
     volumes:
       - ./nginx/configs:/etc/nginx/conf.d/
       - ./nginx/keys:/etc/nginx/keys
@@ -17,7 +19,8 @@ services:
       - auth
   app:
     hostname: app
-    
+    environment:
+      TZ: Asia/Tokyo
     build:
       context: ./backend
       dockerfile: dockerfile
@@ -38,6 +41,8 @@ services:
 
   auth:
     image: ghcr.io/mattuu0/authbase/auth:v0.1.5
+    environment:
+      TZ: Asia/Tokyo
     env_file:
       - ./config/auth.env
       - ./openssl/jwtKeys/private.env
@@ -51,6 +56,8 @@ services:
 
   migrate:
     image: ghcr.io/mattuu0/authbase/auth:v0.1.5
+    environment:
+      TZ: Asia/Tokyo
     env_file:
         - ./config/auth.env
     command: ["/auth","migrate","-r"]
