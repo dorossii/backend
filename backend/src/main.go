@@ -5,6 +5,7 @@ import (
 	"backend/middlewares"
 	"backend/models"
 	"backend/services"
+	"backend/seeds"
 	"log"
 
 	"net/http"
@@ -16,6 +17,12 @@ import (
 func main() {
 	// モデル初期化
 	models.Init()
+
+	// シードデータ投入
+	err := seeds.Seed()
+	if err != nil {
+		log.Fatal("Failed to seed data: ", err)
+	}
 
 	// task画像サービス初期化
 	if err := services.InitTaskImageService(); err != nil {
