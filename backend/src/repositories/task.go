@@ -35,7 +35,7 @@ func GetUserTasks(userID string) ([]TaskResponse, error) {
             base_tasks.description, 
             CAST(UNIX_TIMESTAMP(tasks.start_time) AS SIGNED) as start_date, 
             CAST(UNIX_TIMESTAMP(tasks.end_time) AS SIGNED) as end_time, 
-            tasks.image_id,
+            base_tasks.image_id,
             tasks.message
         `).
 		Joins("JOIN base_tasks ON tasks.base_id = base_tasks.base_id").
