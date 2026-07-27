@@ -109,6 +109,8 @@ func TestGetPendingTasks(t *testing.T) {
 	truncateTasks(t)
 
 	TestRegisterUser(t)
+	// RegisterUser経由で自動生成されたタスクは本テストの検証対象外のため除去する
+	truncateTasks(t)
 
 	friend := models.FriendShips{
 		UserID:   "user-001",
@@ -194,6 +196,8 @@ func TestGetPendingTasks_FriendHasNoPendingTask(t *testing.T) {
 	truncateTasks(t)
 
 	TestRegisterUser(t)
+	// RegisterUser経由で自動生成されたタスクは本テストの検証対象外のため除去する
+	truncateTasks(t)
 
 	friend := models.FriendShips{
 		UserID:   "user-001",
@@ -262,6 +266,8 @@ func TestGetPendingTasks_NonFriendTaskExcluded(t *testing.T) {
 	truncateTasks(t)
 
 	TestRegisterUser(t)
+	// RegisterUser経由で自動生成されたタスクは本テストの検証対象外のため除去する
+	truncateTasks(t)
 
 	// user-001とuser-002はフレンドだが、user-003とはフレンドではない
 	friend := models.FriendShips{
@@ -392,6 +398,8 @@ func TestGetPendingTasks_ReverseFriendShipDirection(t *testing.T) {
 	truncateTasks(t)
 
 	TestRegisterUser(t)
+	// RegisterUser経由で自動生成されたタスクは本テストの検証対象外のため除去する
+	truncateTasks(t)
 
 	// user-002がuser-001に対して申請し承認された体（friend_id側が自分）
 	friend := models.FriendShips{
@@ -448,6 +456,8 @@ func TestGetPendingTasks_MultipleFriendsMixedStatus(t *testing.T) {
 	truncateTasks(t)
 
 	TestRegisterUser(t)
+	// RegisterUser経由で自動生成されたタスクは本テストの検証対象外のため除去する
+	truncateTasks(t)
 
 	// user-001はuser-002、user-003の両方とフレンド
 	friendWith002 := models.FriendShips{
@@ -529,6 +539,8 @@ func TestGetPendingTasks_ResponseFieldsMapping(t *testing.T) {
 	truncateTasks(t)
 
 	TestRegisterUser(t)
+	// RegisterUser経由で自動生成されたタスクは本テストの検証対象外のため除去する
+	truncateTasks(t)
 
 	friend := models.FriendShips{
 		UserID:   "user-001",
