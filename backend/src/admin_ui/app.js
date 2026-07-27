@@ -483,15 +483,22 @@
     });
   }
 
+  // ユーザー一覧を取得し、セレクトボックス用のoptions配列に変換する
+  function fetchUserOptions() {
+    return apiRequest("users").then(function (data) {
+      var users = (data && data.users) || [];
+      return users.map(function (user) {
+        return { label: user.UserName + "（" + user.UserID + "）", value: user.UserID };
+      });
+    });
+  }
+
   function openTaskNewModal() {
-    Promise.all([apiRequest("users"), apiRequest("base-tasks")])
+    Promise.all([fetchUserOptions(), apiRequest("base-tasks")])
       .then(function (results) {
-        var users = (results[0] && results[0].users) || [];
+        var userOptions = results[0] || [];
         var baseTasks = (results[1] && results[1].baseTasks) || [];
 
-        var userOptions = users.map(function (user) {
-          return { label: user.UserName + "（" + user.UserID + "）", value: user.UserID };
-        });
         var baseTaskOptions = baseTasks.map(function (bt) {
           return { label: bt.TaskName + "（" + TASK_TAGS[bt.Tags] + " / 難易度" + bt.DifficultyLevel + "）", value: bt.BaseID };
         });
@@ -651,25 +658,57 @@
   }
 
   function openFriendshipNewModal() {
-    openModal(
-      "フレンド関係の作成(強制成立)",
-      [
-        { key: "UserID", label: "UserID", type: "text", value: "" },
-        { key: "FriendID", label: "FriendID", type: "text", value: "" },
-      ],
-      function (values) {
-        apiRequest("friendships", { method: "POST", body: values })
-          .then(function () {
-            closeModal();
-            showToast("フレンド関係を成立させました", false);
-            friendshipRows.push({ userID: values.UserID, friendID: values.FriendID, status: 1 });
-            renderFriendships();
-          })
-          .catch(function (err) {
-            showToast(err.message, true);
-          });
-      }
-    );
+    fetchUserOptions()
+      .then(function (userOptions) {
+        openModal(
+          "フレンド関係の作成(強制成立)",
+          [
+            {
+              key: "UserID",
+              label: "ユーザー",
+              type: "select-string",
+              value: "",
+              options: userOptions,
+              placeholder: userOptions.length ? "ユーザーを選択してください" : "ユーザーが登録されていません",
+            },
+            {
+              key: "FriendID",
+              label: "フレンド",
+              type: "select-string",
+              value: "",
+              options: userOptions,
+              placeholder: userOptions.length ? "フレンドを選択してください" : "ユーザーが登録されていません",
+            },
+          ],
+          function (values) {
+            if (!values.UserID || !values.FriendID) {
+              showToast("ユーザーとフレンドを選択してください", true);
+              return;
+            }
+            if (values.UserID === values.FriendID) {
+              showToast("ユーザーとフレンドには異なるユーザーを選択してください", true);
+              return;
+            }
+            openFriendshipCreateRequest(values);
+          }
+        );
+      })
+      .catch(function (err) {
+        showToast(err.message, true);
+      });
+  }
+
+  function openFriendshipCreateRequest(values) {
+    apiRequest("friendships", { method: "POST", body: values })
+      .then(function () {
+        closeModal();
+        showToast("フレンド関係を成立させました", false);
+        friendshipRows.push({ userID: values.UserID, friendID: values.FriendID, status: 1 });
+        renderFriendships();
+      })
+      .catch(function (err) {
+        showToast(err.message, true);
+      });
   }
 
   function openFriendshipStatusModal(pair) {
