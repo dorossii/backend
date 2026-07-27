@@ -27,11 +27,11 @@ func RequireAdminSessionPage(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
 		session, err := Store.Get(ctx.Request(), AdminSessionName)
 		if err != nil {
-			return ctx.Redirect(http.StatusFound, "/admin/login.html")
+			return ctx.Redirect(http.StatusFound, "login.html")
 		}
 
 		if authenticated, ok := session.Values["authenticated"].(bool); !ok || !authenticated {
-			return ctx.Redirect(http.StatusFound, "/admin/login.html")
+			return ctx.Redirect(http.StatusFound, "login.html")
 		}
 
 		return next(ctx)
