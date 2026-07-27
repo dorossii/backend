@@ -102,9 +102,9 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		notice.GET("/", TempController)
 	}
 
-	// 管理画面ログイン・ログアウト(認証不要)
-	router.POST("/admin/login", controllers.AdminLogin)
-	router.POST("/admin/logout", controllers.AdminLogout)
+	// 管理画面ログイン・ログアウト(認証不要、ブルートフォース対策でレート制限)
+	router.POST("/admin/login", controllers.AdminLogin, middlewares.AdminRateLimiter)
+	router.POST("/admin/logout", controllers.AdminLogout, middlewares.AdminRateLimiter)
 
 	// 管理画面 静的アセット(CSS/JS, 認証不要)
 	router.Static("/admin/static", "admin_ui")
@@ -117,10 +117,10 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 	// 管理画面 本体(セッション認証必須、未認証時はログインページへリダイレクト)
 	router.GET("/admin/", func(ctx echo.Context) error {
 		return ctx.File("admin_ui/index.html")
-	}, middlewares.RequireAdminSessionPage)
+	}, middlewares.RequireAdminSessionPage, middlewares.AdminRateLimiter)
 
-	// adminグループ
-	admin := router.Group("/admin", middlewares.RequireAdminSession)
+	// adminグループ(ブルートフォース対策でIPごとに1秒1リクエストへ制限)
+	admin := router.Group("/admin", middlewares.RequireAdminSession, middlewares.AdminRateLimiter)
 	{
 		// BaseTask(タスクテンプレート) CRUD
 		baseTask := admin.Group("/base-tasks")
