@@ -134,6 +134,14 @@
         if (field.readOnly) input.readOnly = true;
       }
       inputs[field.key] = input;
+      if (field.onChange) {
+        input.addEventListener("change", function () {
+          field.onChange(input.value, function (key, value) {
+            var target = inputs[key];
+            if (target) target.value = value;
+          });
+        });
+      }
       wrap.appendChild(input);
       if (field.hint) wrap.appendChild(el("span", { className: "field-hint", text: field.hint }));
       modalForm.appendChild(wrap);
@@ -407,6 +415,33 @@
       });
   }
 
+  // Date <-> "YYYY-MM-DDTHH:mm" (datetime-local入力用) の相互変換
+  function toDatetimeLocalValue(isoString) {
+    if (!isoString) return "";
+    var d = new Date(isoString);
+    if (isNaN(d.getTime())) return "";
+    var pad = function (n) { return String(n).padStart(2, "0"); };
+    return (
+      d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) +
+      "T" + pad(d.getHours()) + ":" + pad(d.getMinutes())
+    );
+  }
+
+  function datetimeLocalToISOString(value) {
+    if (!value) return null;
+    var d = new Date(value);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString();
+  }
+
+  function formatDateTime(isoString) {
+    if (!isoString) return "-";
+    var d = new Date(isoString);
+    if (isNaN(d.getTime())) return "-";
+    var pad = function (n) { return String(n).padStart(2, "0"); };
+    return d.getFullYear() + "/" + pad(d.getMonth() + 1) + "/" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+
   function statusBadgeClass(status) {
     if (status === 1) return "badge badge-pending";
     if (status === 2) return "badge badge-completed";
@@ -418,7 +453,7 @@
 
     if (tasks.length === 0) {
       tasksTbody.appendChild(
-        el("tr", { className: "empty-row" }, [el("td", { attrs: { colspan: "8" }, text: "タスクが見つかりません" })])
+        el("tr", { className: "empty-row" }, [el("td", { attrs: { colspan: "11" }, text: "タスクが見つかりません" })])
       );
       return;
     }
@@ -472,8 +507,11 @@
       var row = el("tr", {}, [
         el("td", { text: task.TaskID }),
         el("td", { text: task.UserID }),
-        el("td", { text: task.BaseID }),
+        el("td", { text: task.TaskName || task.BaseID }),
+        el("td", { text: TASK_TAGS[task.Tags] || String(task.Tags) }),
         el("td", {}, [statusBadge]),
+        el("td", { text: formatDateTime(task.StartTime) }),
+        el("td", { text: formatDateTime(task.EndTime) }),
         el("td", { text: task.RequireImage ? "必須" : "任意" }),
         el("td", {}, [imageLink]),
         el("td", { text: task.Message || "" }),
@@ -498,10 +536,19 @@
       .then(function (results) {
         var userOptions = results[0] || [];
         var baseTasks = (results[1] && results[1].baseTasks) || [];
+        var baseTasksById = {};
+        baseTasks.forEach(function (bt) { baseTasksById[bt.BaseID] = bt; });
 
         var baseTaskOptions = baseTasks.map(function (bt) {
           return { label: bt.TaskName + "（" + TASK_TAGS[bt.Tags] + " / 難易度" + bt.DifficultyLevel + "）", value: bt.BaseID };
         });
+
+        var now = new Date();
+        var defaultStart = toDatetimeLocalValue(now.toISOString());
+        var defaultBaseTask = baseTasks[0];
+        var defaultEnd = defaultBaseTask
+          ? toDatetimeLocalValue(new Date(now.getTime() + defaultBaseTask.DueTime * 24 * 60 * 60 * 1000).toISOString())
+          : "";
 
         openModal(
           "タスクの手動生成",
@@ -521,7 +568,16 @@
               value: "",
               options: baseTaskOptions,
               placeholder: baseTaskOptions.length ? "テンプレートを選択してください" : "テンプレートが登録されていません",
+              onChange: function (value, setFieldValue) {
+                var bt = baseTasksById[value];
+                if (!bt) return;
+                var start = new Date();
+                setFieldValue("StartTime", toDatetimeLocalValue(start.toISOString()));
+                setFieldValue("EndTime", toDatetimeLocalValue(new Date(start.getTime() + bt.DueTime * 24 * 60 * 60 * 1000).toISOString()));
+              },
             },
+            { key: "StartTime", label: "開始日時", type: "datetime-local", value: defaultStart, hint: "テンプレート選択時に自動セットされます（変更可）" },
+            { key: "EndTime", label: "終了期限", type: "datetime-local", value: defaultEnd, hint: "テンプレート選択時に自動セットされます（変更可）" },
             { key: "RequireImage", label: "画像を必須にする", type: "checkbox", value: false },
             { key: "Message", label: "メッセージ(任意)", type: "text", value: "" },
           ],
@@ -530,7 +586,11 @@
               showToast("対象ユーザーとテンプレートを選択してください", true);
               return;
             }
-            apiRequest("tasks", { method: "POST", body: values })
+            var body = Object.assign({}, values, {
+              StartTime: datetimeLocalToISOString(values.StartTime),
+              EndTime: datetimeLocalToISOString(values.EndTime),
+            });
+            apiRequest("tasks", { method: "POST", body: body })
               .then(function () {
                 closeModal();
                 showToast("タスクを作成しました", false);
@@ -548,25 +608,48 @@
   }
 
   function openTaskEditModal(task) {
-    openModal(
-      "タスクの編集",
-      [
-        { key: "RequireImage", label: "画像必須", type: "checkbox", value: task.RequireImage },
-        { key: "Message", label: "メッセージ", type: "text", value: task.Message || "" },
-      ],
-      function (values) {
-        var body = Object.assign({}, task, values);
-        apiRequest("tasks/" + encodeURIComponent(task.TaskID), { method: "PUT", body: body })
-          .then(function () {
-            closeModal();
-            showToast("更新しました", false);
-            loadTasks();
-          })
-          .catch(function (err) {
-            showToast(err.message, true);
-          });
-      }
-    );
+    apiRequest("base-tasks")
+      .then(function (data) {
+        var baseTasks = (data && data.baseTasks) || [];
+        var baseTaskOptions = baseTasks.map(function (bt) {
+          return { label: bt.TaskName + "（" + TASK_TAGS[bt.Tags] + " / 難易度" + bt.DifficultyLevel + "）", value: bt.BaseID };
+        });
+
+        openModal(
+          "タスクの編集",
+          [
+            {
+              key: "BaseID",
+              label: "テンプレート",
+              type: "select-string",
+              value: task.BaseID,
+              options: baseTaskOptions,
+            },
+            { key: "StartTime", label: "開始日時", type: "datetime-local", value: toDatetimeLocalValue(task.StartTime) },
+            { key: "EndTime", label: "終了期限", type: "datetime-local", value: toDatetimeLocalValue(task.EndTime) },
+            { key: "RequireImage", label: "画像必須", type: "checkbox", value: task.RequireImage },
+            { key: "Message", label: "メッセージ", type: "text", value: task.Message || "" },
+          ],
+          function (values) {
+            var body = Object.assign({}, task, values, {
+              StartTime: datetimeLocalToISOString(values.StartTime),
+              EndTime: datetimeLocalToISOString(values.EndTime),
+            });
+            apiRequest("tasks/" + encodeURIComponent(task.TaskID), { method: "PUT", body: body })
+              .then(function () {
+                closeModal();
+                showToast("更新しました", false);
+                loadTasks();
+              })
+              .catch(function (err) {
+                showToast(err.message, true);
+              });
+          }
+        );
+      })
+      .catch(function (err) {
+        showToast(err.message, true);
+      });
   }
 
   function openTaskStatusModal(task) {

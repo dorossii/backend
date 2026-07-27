@@ -3,16 +3,39 @@ package services
 import (
 	"backend/models"
 	"backend/repositories"
+	"backend/utils"
 	"errors"
+	"time"
 
 	"gorm.io/gorm"
 )
 
-func AdminListTasks(userID string) ([]models.Task, error) {
-	return repositories.ListTasks(userID)
+func AdminListTasks(userID string) ([]repositories.AdminTaskRow, error) {
+	return repositories.AdminListTasksWithBaseTask(userID)
 }
 
 func AdminCreateTask(task *models.Task) error {
+	baseTask, err := repositories.GetBaseTask(task.BaseID)
+	if err != nil {
+		return err
+	}
+
+	if task.TaskID == "" {
+		uuid, err := utils.Genid()
+		if err != nil {
+			return err
+		}
+		task.TaskID = uuid
+	}
+
+	// StartTime/EndTime が未指定の場合は BaseTask の期限(日数)から自動計算する
+	if task.StartTime.IsZero() {
+		task.StartTime = utils.NowJST()
+	}
+	if task.EndTime.IsZero() {
+		task.EndTime = task.StartTime.Add(time.Duration(baseTask.DueTime) * 24 * time.Hour)
+	}
+
 	return repositories.CreateTask(task)
 }
 
