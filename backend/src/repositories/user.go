@@ -205,3 +205,31 @@ func UpdateDirtLevel(tx *gorm.DB, userID string, diff int) error {
 	return tx.Model(&models.User{}).Where("user_id = ?", userID).Update("dirt_level", newDirt).Error
 }
 
+// ListUsers は search が空でなければ UserName/Mailadress の部分一致で絞り込んだユーザー一覧を返す
+func ListUsers(search string) ([]models.User, error) {
+	var users []models.User
+	query := models.DB.Model(&models.User{})
+	if search != "" {
+		like := "%" + search + "%"
+		query = query.Where("user_name LIKE ? OR mailadress LIKE ?", like, like)
+	}
+	err := query.Find(&users).Error
+	return users, err
+}
+
+// UpdateUserStats はHealthPoint/DirtLevelを直接更新する
+func UpdateUserStats(userID string, healthPoint *int, dirtLevel *int) error {
+	updates := map[string]interface{}{}
+	if healthPoint != nil {
+		updates["health_point"] = *healthPoint
+	}
+	if dirtLevel != nil {
+		updates["dirt_level"] = *dirtLevel
+	}
+	if len(updates) == 0 {
+		return nil
+	}
+
+	return models.DB.Model(&models.User{}).Where("user_id = ?", userID).Updates(updates).Error
+}
+

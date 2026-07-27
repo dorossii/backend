@@ -143,7 +143,7 @@ func baseTaskSeed() error {
         },
 	}	
 
-	return models.DB.Create(&baseTasks).Clauses(clause.OnConflict{DoNothing: true}).Error
+	return models.DB.Clauses(clause.OnConflict{DoNothing: true}).Create(&baseTasks).Error
 
 }
 

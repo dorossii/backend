@@ -102,5 +102,62 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		notice.GET("/", TempController)
 	}
 
+	// 管理画面ログイン・ログアウト(認証不要、ブルートフォース対策で緩いレート制限)
+	router.POST("/admin/login", controllers.AdminLogin, middlewares.AdminRateLimiter)
+	router.POST("/admin/logout", controllers.AdminLogout, middlewares.AdminRateLimiter)
+
+	// 管理画面 静的アセット(CSS/JS, 認証不要)
+	router.Static("/admin/static", "admin_ui")
+
+	// 管理画面ログインページ(認証不要)
+	router.GET("/admin/login.html", func(ctx echo.Context) error {
+		return ctx.File("admin_ui/login.html")
+	})
+
+	// 管理画面 本体(セッション認証必須、未認証時はログインページへリダイレクト)
+	router.GET("/admin/", func(ctx echo.Context) error {
+		return ctx.File("admin_ui/index.html")
+	}, middlewares.RequireAdminSessionPage, middlewares.AdminRateLimiter)
+
+	// adminグループ(ブルートフォース対策で緩いレート制限: IPごとに1秒5リクエストまで)
+	admin := router.Group("/admin", middlewares.RequireAdminSession, middlewares.AdminRateLimiter)
+	{
+		// BaseTask(タスクテンプレート) CRUD
+		baseTask := admin.Group("/base-tasks")
+		{
+			baseTask.GET("", controllers.AdminListBaseTasks)
+			baseTask.POST("", controllers.AdminCreateBaseTask)
+			baseTask.PUT("/:id", controllers.AdminUpdateBaseTask)
+			baseTask.DELETE("/:id", controllers.AdminDeleteBaseTask)
+		}
+
+		// Task(個別タスク)管理
+		task := admin.Group("/tasks")
+		{
+			task.GET("", controllers.AdminListTasks)
+			task.POST("", controllers.AdminCreateTask)
+			task.PUT("/:id", controllers.AdminUpdateTask)
+			task.PUT("/:id/status", controllers.AdminUpdateTaskStatus)
+			task.DELETE("/:id", controllers.AdminDeleteTask)
+			task.GET("/:id/image", controllers.AdminGetTaskImage)
+		}
+
+		// フレンド関係管理
+		friendAdmin := admin.Group("/friendships")
+		{
+			friendAdmin.POST("", controllers.AdminCreateFriendShip)
+			friendAdmin.PUT("/:userId/:friendId", controllers.AdminUpdateFriendShipStatus)
+			friendAdmin.DELETE("/:userId/:friendId", controllers.AdminDeleteFriendShip)
+		}
+
+		// ユーザー管理(HP/DirtLevel編集含む)
+		userAdmin := admin.Group("/users")
+		{
+			userAdmin.GET("", controllers.AdminListUsers)
+			userAdmin.GET("/:id", controllers.AdminGetUser)
+			userAdmin.PUT("/:id/stats", controllers.AdminUpdateUserStats)
+		}
+	}
+
 	return router
 }
