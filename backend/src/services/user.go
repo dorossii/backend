@@ -55,6 +55,11 @@ func RegisterUser(userID, userName, email string, req RegisterUserRequest) (*Reg
 		return nil, err
 	}
 
+	// 最初のタスクをユーザーに割り当てる
+	if err := repositories.CreateTaskForUser(userID); err != nil {
+		return nil, err
+	}
+
 	return &RegisterUserResponse{
 		UserID:     user.UserID,
 		UserName:   user.UserName,
