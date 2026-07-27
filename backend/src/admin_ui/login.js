@@ -12,7 +12,7 @@
     var username = document.getElementById("username").value;
     var password = document.getElementById("password").value;
 
-    fetch("/admin/login", {
+    fetch("login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
@@ -24,7 +24,7 @@
             throw new Error((body && body.error) || "ログインに失敗しました");
           });
         }
-        window.location.href = "/admin/";
+        window.location.href = "./";
       })
       .catch(function (err) {
         errorEl.textContent = err.message;

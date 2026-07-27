@@ -59,7 +59,7 @@
 
     return fetch(path, fetchOptions).then(function (res) {
       if (res.status === 401) {
-        window.location.href = "/admin/login.html";
+        window.location.href = "login.html";
         throw new Error("認証切れです");
       }
       if (res.status === 204) return null;
@@ -87,7 +87,7 @@
     if (event.target === modalBackdrop) closeModal();
   });
 
-  // fields: [{key, label, type: 'text'|'number'|'checkbox'|'select', value, options}]
+  // fields: [{key, label, type: 'text'|'number'|'checkbox'|'select'|'select-string', value, options, hint}]
   function openModal(title, fields, onSubmit) {
     modalTitle.textContent = title;
     clearChildren(modalForm);
@@ -109,9 +109,17 @@
       wrap.appendChild(el("span", { className: "field-label", text: field.label }));
 
       var input;
-      if (field.type === "select") {
+      if (field.type === "select" || field.type === "select-string") {
         input = document.createElement("select");
         input.className = "input";
+        if (field.placeholder) {
+          var placeholderOption = el("option", { text: field.placeholder, value: "" });
+          placeholderOption.disabled = true;
+          if (field.value === undefined || field.value === null || field.value === "") {
+            placeholderOption.selected = true;
+          }
+          input.appendChild(placeholderOption);
+        }
         (field.options || []).forEach(function (opt) {
           var optionEl = el("option", { text: opt.label, value: opt.value });
           if (String(opt.value) === String(field.value)) optionEl.selected = true;
@@ -127,6 +135,7 @@
       }
       inputs[field.key] = input;
       wrap.appendChild(input);
+      if (field.hint) wrap.appendChild(el("span", { className: "field-hint", text: field.hint }));
       modalForm.appendChild(wrap);
     });
 
@@ -196,8 +205,8 @@
   });
 
   document.getElementById("logout-btn").addEventListener("click", function () {
-    apiRequest("/admin/logout", { method: "POST" }).then(function () {
-      window.location.href = "/admin/login.html";
+    apiRequest("logout", { method: "POST" }).then(function () {
+      window.location.href = "login.html";
     });
   });
 
@@ -209,7 +218,7 @@
     var search = document.getElementById("user-search").value.trim();
     var query = search ? "?search=" + encodeURIComponent(search) : "";
 
-    apiRequest("/admin/users" + query)
+    apiRequest("users" + query)
       .then(function (data) {
         renderUsers((data && data.users) || []);
       })
@@ -258,7 +267,7 @@
         { key: "DirtLevel", label: "DirtLevel", type: "number", value: user.DirtLevel },
       ],
       function (values) {
-        apiRequest("/admin/users/" + encodeURIComponent(user.UserID) + "/stats", {
+        apiRequest("users/" + encodeURIComponent(user.UserID) + "/stats", {
           method: "PUT",
           body: values,
         })
@@ -284,7 +293,7 @@
   var baseTasksTbody = document.getElementById("base-tasks-tbody");
 
   function loadBaseTasks() {
-    apiRequest("/admin/base-tasks")
+    apiRequest("base-tasks")
       .then(function (data) {
         renderBaseTasks((data && data.baseTasks) || []);
       })
@@ -316,7 +325,7 @@
         text: "削除",
         onClick: function () {
           if (!window.confirm("「" + bt.TaskName + "」を削除しますか？")) return;
-          apiRequest("/admin/base-tasks/" + encodeURIComponent(bt.BaseID), { method: "DELETE" })
+          apiRequest("base-tasks/" + encodeURIComponent(bt.BaseID), { method: "DELETE" })
             .then(function () {
               showToast("削除しました", false);
               loadBaseTasks();
@@ -361,8 +370,8 @@
 
     openModal(isNew ? "タスクテンプレートの新規作成" : "タスクテンプレートの編集", fields, function (values) {
       var path = isNew
-        ? "/admin/base-tasks"
-        : "/admin/base-tasks/" + encodeURIComponent(baseTask.BaseID);
+        ? "base-tasks"
+        : "base-tasks/" + encodeURIComponent(baseTask.BaseID);
       var method = isNew ? "POST" : "PUT";
 
       apiRequest(path, { method: method, body: values })
@@ -389,7 +398,7 @@
     var userID = document.getElementById("task-user-filter").value.trim();
     var query = userID ? "?userID=" + encodeURIComponent(userID) : "";
 
-    apiRequest("/admin/tasks" + query)
+    apiRequest("tasks" + query)
       .then(function (data) {
         renderTasks((data && data.tasks) || []);
       })
@@ -424,7 +433,7 @@
       if (task.ImageID) {
         imageLink = el("a", {
           text: "確認",
-          attrs: { href: "/admin/tasks/" + encodeURIComponent(task.TaskID) + "/image", target: "_blank", rel: "noopener" },
+          attrs: { href: "tasks/" + encodeURIComponent(task.TaskID) + "/image", target: "_blank", rel: "noopener" },
         });
       } else {
         imageLink = el("span", { text: "-" });
@@ -449,7 +458,7 @@
         text: "削除",
         onClick: function () {
           if (!window.confirm("このタスクを削除しますか？")) return;
-          apiRequest("/admin/tasks/" + encodeURIComponent(task.TaskID), { method: "DELETE" })
+          apiRequest("tasks/" + encodeURIComponent(task.TaskID), { method: "DELETE" })
             .then(function () {
               showToast("削除しました", false);
               loadTasks();
@@ -475,26 +484,60 @@
   }
 
   function openTaskNewModal() {
-    openModal(
-      "タスクの手動生成",
-      [
-        { key: "UserID", label: "対象のUserID", type: "text", value: "" },
-        { key: "BaseID", label: "テンプレートのBaseID", type: "text", value: "" },
-        { key: "RequireImage", label: "画像必須", type: "checkbox", value: false },
-        { key: "Message", label: "メッセージ", type: "text", value: "" },
-      ],
-      function (values) {
-        apiRequest("/admin/tasks", { method: "POST", body: values })
-          .then(function () {
-            closeModal();
-            showToast("タスクを作成しました", false);
-            loadTasks();
-          })
-          .catch(function (err) {
-            showToast(err.message, true);
-          });
-      }
-    );
+    Promise.all([apiRequest("users"), apiRequest("base-tasks")])
+      .then(function (results) {
+        var users = (results[0] && results[0].users) || [];
+        var baseTasks = (results[1] && results[1].baseTasks) || [];
+
+        var userOptions = users.map(function (user) {
+          return { label: user.UserName + "（" + user.UserID + "）", value: user.UserID };
+        });
+        var baseTaskOptions = baseTasks.map(function (bt) {
+          return { label: bt.TaskName + "（" + TASK_TAGS[bt.Tags] + " / 難易度" + bt.DifficultyLevel + "）", value: bt.BaseID };
+        });
+
+        openModal(
+          "タスクの手動生成",
+          [
+            {
+              key: "UserID",
+              label: "対象ユーザー",
+              type: "select-string",
+              value: "",
+              options: userOptions,
+              placeholder: userOptions.length ? "ユーザーを選択してください" : "ユーザーが登録されていません",
+            },
+            {
+              key: "BaseID",
+              label: "テンプレート",
+              type: "select-string",
+              value: "",
+              options: baseTaskOptions,
+              placeholder: baseTaskOptions.length ? "テンプレートを選択してください" : "テンプレートが登録されていません",
+            },
+            { key: "RequireImage", label: "画像を必須にする", type: "checkbox", value: false },
+            { key: "Message", label: "メッセージ(任意)", type: "text", value: "" },
+          ],
+          function (values) {
+            if (!values.UserID || !values.BaseID) {
+              showToast("対象ユーザーとテンプレートを選択してください", true);
+              return;
+            }
+            apiRequest("tasks", { method: "POST", body: values })
+              .then(function () {
+                closeModal();
+                showToast("タスクを作成しました", false);
+                loadTasks();
+              })
+              .catch(function (err) {
+                showToast(err.message, true);
+              });
+          }
+        );
+      })
+      .catch(function (err) {
+        showToast(err.message, true);
+      });
   }
 
   function openTaskEditModal(task) {
@@ -506,7 +549,7 @@
       ],
       function (values) {
         var body = Object.assign({}, task, values);
-        apiRequest("/admin/tasks/" + encodeURIComponent(task.TaskID), { method: "PUT", body: body })
+        apiRequest("tasks/" + encodeURIComponent(task.TaskID), { method: "PUT", body: body })
           .then(function () {
             closeModal();
             showToast("更新しました", false);
@@ -528,7 +571,7 @@
       "タスクの状態変更",
       [{ key: "Status", label: "状態", type: "select", value: task.Status, options: options }],
       function (values) {
-        apiRequest("/admin/tasks/" + encodeURIComponent(task.TaskID) + "/status", {
+        apiRequest("tasks/" + encodeURIComponent(task.TaskID) + "/status", {
           method: "PUT",
           body: values,
         })
@@ -581,7 +624,7 @@
         onClick: function () {
           if (!window.confirm("このフレンド関係を削除しますか？")) return;
           apiRequest(
-            "/admin/friendships/" + encodeURIComponent(pair.userID) + "/" + encodeURIComponent(pair.friendID),
+            "friendships/" + encodeURIComponent(pair.userID) + "/" + encodeURIComponent(pair.friendID),
             { method: "DELETE" }
           )
             .then(function () {
@@ -615,7 +658,7 @@
         { key: "FriendID", label: "FriendID", type: "text", value: "" },
       ],
       function (values) {
-        apiRequest("/admin/friendships", { method: "POST", body: values })
+        apiRequest("friendships", { method: "POST", body: values })
           .then(function () {
             closeModal();
             showToast("フレンド関係を成立させました", false);
@@ -639,7 +682,7 @@
       [{ key: "Status", label: "状態", type: "select", value: pair.status, options: options }],
       function (values) {
         apiRequest(
-          "/admin/friendships/" + encodeURIComponent(pair.userID) + "/" + encodeURIComponent(pair.friendID),
+          "friendships/" + encodeURIComponent(pair.userID) + "/" + encodeURIComponent(pair.friendID),
           { method: "PUT", body: values }
         )
           .then(function () {
