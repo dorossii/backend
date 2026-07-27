@@ -14,6 +14,7 @@ func TestBaseTask(t *testing.T) {
 			Description: "部屋を掃除するタスク",
 			DifficultyLevel: 3,
 			DueTime:         3,
+			ImageId:         "image-001",
 			ImageFlag:       true,
 			Tags:            models.TaskTagCleaning,
 		},
@@ -23,6 +24,7 @@ func TestBaseTask(t *testing.T) {
 			Description: "洗濯物を干すタスク",
 			DifficultyLevel: 2,
 			DueTime:         3,
+			ImageId:         "image-002",
 			ImageFlag:       false,
 			Tags:            models.TaskTagLaundry,
 		},
@@ -32,6 +34,7 @@ func TestBaseTask(t *testing.T) {
 			Description: "夕飯を作るタスク",
 			DifficultyLevel: 4,
 			DueTime:         3,
+			ImageId:         "image-003",
 			ImageFlag:       false,
 			Tags:            models.TaskTagCooking,
 		},
@@ -41,6 +44,7 @@ func TestBaseTask(t *testing.T) {
 			Description: "ゴミを出すタスク",
 			DifficultyLevel: 1,
 			DueTime:         3,
+			ImageId:         "image-004",
 			ImageFlag:       false,
 			Tags:            models.TaskTagCleaning,
 		},
@@ -83,6 +87,13 @@ func TestBaseTask(t *testing.T) {
 		t.Fatalf(
 			"unexpected DifficultyLevel: %d",
 			result.DifficultyLevel,
+		)
+	}
+
+	if result.ImageId != "image-001" {
+		t.Fatalf(
+			"unexpected ImageId: %s",
+			result.ImageId,
 		)
 	}
 

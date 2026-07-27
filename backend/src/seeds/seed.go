@@ -27,6 +27,7 @@ func baseTaskSeed() error {
 			DifficultyLevel: 2, // 難易度は1から5の範囲で設定
 			DueTime: 3,			// 日数単位の期限
 			ImageFlag: true,
+			ImageId: "hosu.webp",
 			Tags: models.TaskTagLaundry,
 		},
 		{
@@ -36,6 +37,7 @@ func baseTaskSeed() error {
 			DifficultyLevel: 3,
 			DueTime: 5,
 			ImageFlag: true,
+			ImageId: "souziki.webp",
 			Tags: models.TaskTagCleaning,
 		},
 		{
@@ -45,6 +47,7 @@ func baseTaskSeed() error {
 			DifficultyLevel: 2,
 			DueTime: 5,
 			ImageFlag: true,
+			ImageId: "shokki.webp",
 			Tags: models.TaskTagCooking,
 		},
 		{
@@ -54,15 +57,7 @@ func baseTaskSeed() error {
 			DifficultyLevel: 1,
 			DueTime: 7,
 			ImageFlag: true,
-			Tags: models.TaskTagCleaning,
-		},
-		{
-			BaseID: "a0d891d7-56f3-4685-b807-051ff89972b2",
-			TaskName: "お風呂掃除",
-			Description: "浴槽、床、蛇口周りをスポンジと洗剤を使って磨く。",
-			DifficultyLevel: 5,
-			DueTime: 14,
-			ImageFlag: true,
+			ImageId: "gomi.webp",
 			Tags: models.TaskTagCleaning,
 		},
 		{
@@ -72,15 +67,18 @@ func baseTaskSeed() error {
 			DifficultyLevel: 5,
 			DueTime: 14,
 			ImageFlag: false,
+			ImageId: "toilet.webp",
 			Tags: models.TaskTagCleaning,
+
 		},
 		{
 			BaseID: "798f8933-f759-4176-adb9-99371rc014087",
-			TaskName: "窓拭き",
-			Description: "リビングの大きな窓の汚れを拭き取り、視界をクリアにする。",
+			TaskName: "棚拭き",
+			Description: "家具や棚の表面を乾いた布で拭き、ほこりを取り除く。",
 			DifficultyLevel: 4,
 			DueTime: 14,
 			ImageFlag: true,
+			ImageId: "tanafuki.webp",
 			Tags: models.TaskTagCleaning,
 		},
 		{
@@ -90,6 +88,7 @@ func baseTaskSeed() error {
 			DifficultyLevel: 3,
 			DueTime: 3,
 			ImageFlag: true,
+			ImageId: "kaimono.webp",
 			Tags: models.TaskTagAther,
 		},
         {
@@ -99,6 +98,7 @@ func baseTaskSeed() error {
             DifficultyLevel: 1,
             DueTime: 7,
             ImageFlag: false,
+            ImageId: "yubin.webp",
             Tags: models.TaskTagAther,
         },
         {
@@ -108,6 +108,7 @@ func baseTaskSeed() error {
             DifficultyLevel: 1,
             DueTime: 1,
             ImageFlag: true,
+			ImageId: "bed.webp",
             Tags: models.TaskTagCleaning,
         },
         {
@@ -117,6 +118,7 @@ func baseTaskSeed() error {
             DifficultyLevel: 4,
             DueTime: 7,
             ImageFlag: true,
+			ImageId: "airon.webp",
             Tags: models.TaskTagLaundry,
         },
         {
@@ -126,6 +128,7 @@ func baseTaskSeed() error {
             DifficultyLevel: 3,
             DueTime: 14,
             ImageFlag: true,
+            ImageId: "reizouko.webp",
             Tags: models.TaskTagCooking,
         },
         {
@@ -135,11 +138,12 @@ func baseTaskSeed() error {
             DifficultyLevel: 2,
             DueTime: 10,
             ImageFlag: true,
+			ImageId: "genkan.webp",
             Tags: models.TaskTagCleaning,
         },
 	}	
 
-	return models.DB.Create(&baseTasks).Clauses(clause.OnConflict{DoNothing: true}).Error
+	return models.DB.Clauses(clause.OnConflict{DoNothing: true}).Create(&baseTasks).Error
 
 }
 

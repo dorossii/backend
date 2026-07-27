@@ -2,6 +2,10 @@ package repositories
 
 import (
 	"backend/models"
+	"backend/utils"
+	"errors"
+	"time"
+	"math/rand"
 
 	"gorm.io/gorm"
 )
@@ -9,6 +13,72 @@ import (
 func CreateUser(user *models.User) error {
 	return models.DB.Create(user).Error
 }
+
+func CreateTaskForUser(userID string) error {
+
+	// 1ユーザーにつき何個タスクを作成するかの定数
+	const tasksPerUser = 2
+
+	// 全てのBaseTaskを取得
+	var baseTasks []models.BaseTask
+	if err := models.DB.Find(&baseTasks).Error; err != nil {
+		return err
+	}
+
+	// ベースタスクが2つ未満だと「1ユーザーにつき2タスク」を満たせないためエラーハンドリング
+	if len(baseTasks) < tasksPerUser {
+		return errors.New("insufficient base tasks available (minimum 2 required)")
+	}
+
+	// 乱数生成器の初期化
+	r := rand.New(rand.NewSource(utils.NowJST().UnixNano()))
+
+	var tasksToInsert []models.Task
+	now := utils.NowJST()
+
+	// 同じユーザーに同じタスクが重複して割り当たらないようにインデックスをシャッフル
+	shuffledIndices := r.Perm(len(baseTasks))
+
+	// 上位2つのランダムなタスクを選択
+	for i := 0; i < tasksPerUser; i++ {
+		baseTask := baseTasks[shuffledIndices[i]]
+
+		// DueTime（期限）の仕様に合わせて終了時間を計算
+		endTime := now.Add(time.Duration(baseTask.DueTime) * 24 * time.Hour)
+
+		// UUIDを生成
+		uuid, err := utils.Genid()
+		if err != nil {
+			return err
+		}
+
+		// imageflagがtrueの要素の中で10%の確率でRequireImageをtrueにする
+		requireImage := false
+		if baseTask.ImageFlag && r.Float64() < 0.1 {
+			requireImage = true
+		}
+
+		task := models.Task{
+			TaskID:       uuid,
+			BaseID:       baseTask.BaseID,
+			UserID:       userID,
+			Status:       models.TaskStatusPending,
+			StartTime:    now,
+			EndTime:      endTime,
+			ImageID:      "", // 初期状態は空
+			RequireImage: requireImage,
+		}
+		tasksToInsert = append(tasksToInsert, task)
+	}
+
+	// バルクインサート（一括保存）を実行
+	if err := models.DB.CreateInBatches(&tasksToInsert, 100).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
 
 func CreateUserTx(tx *gorm.DB, user *models.User) error {
 	return tx.Create(user).Error
@@ -133,5 +203,33 @@ func UpdateDirtLevel(tx *gorm.DB, userID string, diff int) error {
 	}
 
 	return tx.Model(&models.User{}).Where("user_id = ?", userID).Update("dirt_level", newDirt).Error
+}
+
+// ListUsers は search が空でなければ UserName/Mailadress の部分一致で絞り込んだユーザー一覧を返す
+func ListUsers(search string) ([]models.User, error) {
+	var users []models.User
+	query := models.DB.Model(&models.User{})
+	if search != "" {
+		like := "%" + search + "%"
+		query = query.Where("user_name LIKE ? OR mailadress LIKE ?", like, like)
+	}
+	err := query.Find(&users).Error
+	return users, err
+}
+
+// UpdateUserStats はHealthPoint/DirtLevelを直接更新する
+func UpdateUserStats(userID string, healthPoint *int, dirtLevel *int) error {
+	updates := map[string]interface{}{}
+	if healthPoint != nil {
+		updates["health_point"] = *healthPoint
+	}
+	if dirtLevel != nil {
+		updates["dirt_level"] = *dirtLevel
+	}
+	if len(updates) == 0 {
+		return nil
+	}
+
+	return models.DB.Model(&models.User{}).Where("user_id = ?", userID).Updates(updates).Error
 }
 

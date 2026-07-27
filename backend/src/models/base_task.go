@@ -15,6 +15,7 @@ type BaseTask struct {
 	Description     string  `json:"Description"`              // タスクの説明
 	DifficultyLevel int     `json:"DifficultyLevel"`          // 難易度
 	DueTime         int     `json:"DueTime"`                  // タスク期限
+	ImageId 	  	string  `json:"ImageId"`                  // 画像ID
 	ImageFlag       bool    `json:"ImageFlag" gorm:"default:false"` // 写真フラグ
 	Tags            TaskTag `json:"Tags"`                     // タグ
 }

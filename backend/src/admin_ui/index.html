@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>管理画面</title>
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">Dorossii Admin</div>
+      <nav class="sidebar-nav">
+        <button class="nav-item is-active" data-view="users">ユーザー</button>
+        <button class="nav-item" data-view="base-tasks">タスクテンプレート</button>
+        <button class="nav-item" data-view="tasks">タスク</button>
+        <button class="nav-item" data-view="friendships">フレンド関係</button>
+      </nav>
+      <button id="logout-btn" class="btn btn-ghost btn-block">ログアウト</button>
+    </aside>
+
+    <main class="content">
+      <header class="content-header">
+        <h1 id="view-title" class="view-title">ユーザー</h1>
+        <div id="toast" class="toast" hidden></div>
+      </header>
+
+      <!-- ユーザー管理 -->
+      <section id="view-users" class="view is-active">
+        <div class="toolbar">
+          <input type="search" id="user-search" class="input" placeholder="名前・メールアドレスで検索">
+          <button id="user-search-btn" class="btn btn-primary">検索</button>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>UserID</th>
+                <th>名前</th>
+                <th>メール</th>
+                <th>HP</th>
+                <th>汚れ</th>
+                <th>Combo</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="users-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- タスクテンプレート -->
+      <section id="view-base-tasks" class="view">
+        <div class="toolbar">
+          <button id="base-task-new-btn" class="btn btn-primary">新規テンプレート</button>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>BaseID</th>
+                <th>タスク名</th>
+                <th>説明</th>
+                <th>難易度</th>
+                <th>期限(日)</th>
+                <th>画像必須</th>
+                <th>タグ</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="base-tasks-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- タスク -->
+      <section id="view-tasks" class="view">
+        <div class="toolbar">
+          <input type="text" id="task-user-filter" class="input" placeholder="UserIDで絞り込み">
+          <button id="task-filter-btn" class="btn btn-secondary">絞り込み</button>
+          <button id="task-new-btn" class="btn btn-primary">タスクを手動生成</button>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>TaskID</th>
+                <th>UserID</th>
+                <th>BaseID</th>
+                <th>状態</th>
+                <th>画像必須</th>
+                <th>画像</th>
+                <th>メッセージ</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="tasks-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- フレンド関係 -->
+      <section id="view-friendships" class="view">
+        <div class="toolbar">
+          <button id="friendship-new-btn" class="btn btn-primary">フレンド関係を作成</button>
+        </div>
+        <p class="hint-text">フレンド関係は UserID / FriendID の組で管理されています。一覧APIが無いため、対象ユーザーのIDを指定して操作してください。</p>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>UserID</th>
+                <th>FriendID</th>
+                <th>状態</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="friendships-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 汎用モーダル -->
+  <div id="modal-backdrop" class="modal-backdrop" hidden>
+    <div class="modal">
+      <h2 id="modal-title" class="modal-title"></h2>
+      <form id="modal-form" class="modal-form"></form>
+    </div>
+  </div>
+
+  <script src="static/app.js"></script>
+</body>
+</html>

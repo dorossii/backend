@@ -32,6 +32,16 @@ def get_admin_credentials():
     admin_password = generate_random_key(32)  # 管理者パスワードは32文字で生成
     return admin_email, admin_password
 
+def get_admin_panel_credentials():
+    """
+    管理画面(WebUI)用のユーザー名を取得し、ランダムなパスワード・セッションシークレットを生成します。
+    """
+    print(f"\n--- 管理画面(WebUI)アカウントの設定 ---")
+    admin_panel_username = input(f"管理画面のユーザー名を入力してください（未入力の場合は 'admin'）: ") or "admin"
+    admin_panel_password = generate_random_key(32)  # 管理画面パスワードは32文字で生成
+    admin_panel_session_secret = generate_random_key()  # セッション署名用シークレットは64文字で生成
+    return admin_panel_username, admin_panel_password, admin_panel_session_secret
+
 def confirm_overwrite_all(files_to_check):
     """
     主要な設定ファイルが存在するかを確認し、上書きするかを尋ねます。
@@ -125,11 +135,20 @@ def main():
 
     # app.env のテンプレート
     session_secret_key = generate_random_key()
+
+    # 管理画面(WebUI)用の認証情報を取得
+    admin_panel_username, admin_panel_password, admin_panel_session_secret = get_admin_panel_credentials()
+
     app_env_template = f"""
 SessionSecret = "{session_secret_key}"
 GRPC_SERVER = auth:9000
 DATABASE_DSN = "main:main@tcp(db:3306)/maindb?charset=utf8mb4&parseTime=True&loc=Local"
 TASK_IMAGE_DIR= "/app/assets/task-images"
+
+# 管理画面(WebUI)用
+ADMIN_USERNAME = "{admin_panel_username}"
+ADMIN_PASSWORD = "{admin_panel_password}"
+SESSION_SECRET = "{admin_panel_session_secret}"
 """
 
     # app.env ファイルを生成
