@@ -112,3 +112,26 @@ func UpdateUserCombo(db *gorm.DB, userID string, combo int, completedAt time.Tim
 	return db.Model(&models.User{}).Where("user_id = ?", userID).
 		Updates(models.User{Combo: combo, LastTaskCompletedAt: &completedAt}).Error
 }
+
+func CreateTask(task *models.Task) error {
+	return models.DB.Create(task).Error
+}
+
+func UpdateTask(task *models.Task) error {
+	return models.DB.Save(task).Error
+}
+
+func DeleteTask(taskID string) error {
+	return models.DB.Where("task_id = ?", taskID).Delete(&models.Task{}).Error
+}
+
+// ListTasks は userID が空文字なら全件、指定されていればそのユーザーのタスク一覧を返す
+func ListTasks(userID string) ([]models.Task, error) {
+	var tasks []models.Task
+	query := models.DB.Model(&models.Task{})
+	if userID != "" {
+		query = query.Where("user_id = ?", userID)
+	}
+	err := query.Find(&tasks).Error
+	return tasks, err
+}

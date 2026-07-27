@@ -39,6 +39,9 @@ func main() {
 	// ミドルウェア初期化
 	middlewares.Init()
 
+	// 管理画面用セッションストアの初期化
+	middlewares.InitSession()
+
 	// ルーティングの設定を追加
 	router = InitRouter(router)
 
