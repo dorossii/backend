@@ -33,5 +33,7 @@ RUN CGO_ENABLED=0 go build -ldflags="-s -w" -trimpath -o /go/bin/app
 FROM gcr.io/distroless/static-debian12 as release
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=builder /go/bin/app /
+# 管理画面(WebUI)の静的アセット(HTML/CSS/JS)を実行時カレントディレクトリにコピーする
+COPY --from=builder /go/src/app/admin_ui /admin_ui
 ENV TZ=Asia/Tokyo
 CMD ["/app"]
