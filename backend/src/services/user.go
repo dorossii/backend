@@ -26,6 +26,18 @@ func RegisterUser(userID, userName, email string, req RegisterUserRequest) (*Reg
 		return nil, errors.New("livingType は alone か family のみ有効です")
 	}
 
+	if existing, err := repositories.GetUser(userID); err == nil {
+		// 既に登録済みの場合は何もせず成功として返す（認証機からのprovisioning呼び出しが複数回発生しうるため）
+		return &RegisterUserResponse{
+			UserID:     existing.UserID,
+			UserName:   existing.UserName,
+			BirthDate:  existing.BirthDate.Unix(),
+			LivingType: req.LivingType,
+		}, nil
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
 	birthDate := time.Unix(req.BirthDate, 0).UTC()
 
 	user := &models.User{
