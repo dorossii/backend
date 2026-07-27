@@ -8,6 +8,7 @@ require (
 	github.com/gorilla/sessions v1.4.0
 	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v4 v4.15.2
+	golang.org/x/time v0.15.0
 	gorm.io/driver/mysql v1.6.0
 	gorm.io/gorm v1.31.1
 )
@@ -27,5 +28,4 @@ require (
 	golang.org/x/net v0.53.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
 	golang.org/x/text v0.36.0 // indirect
-	golang.org/x/time v0.15.0 // indirect
 )
