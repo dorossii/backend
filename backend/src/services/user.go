@@ -45,6 +45,8 @@ func RegisterUser(userID, userName, email string, req RegisterUserRequest) (*Reg
 		UserName:   userName,
 		BirthDate:  birthDate,
 		Mailadress: email,
+		Icon:       "pineTree",
+		BgColor:    "icon1",
 	}
 
 	userRoom := &models.UserRoom{
