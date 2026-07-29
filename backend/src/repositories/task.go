@@ -135,3 +135,53 @@ func ListTasks(userID string) ([]models.Task, error) {
 	err := query.Find(&tasks).Error
 	return tasks, err
 }
+
+// AdminTaskRow は管理画面のタスク一覧向けに Task と BaseTask の内容を突き合わせた行
+type AdminTaskRow struct {
+	TaskID          string           `json:"TaskID"`
+	BaseID          string           `json:"BaseID"`
+	UserID          string           `json:"UserID"`
+	Status          models.TaskStatus `json:"Status"`
+	StartTime       time.Time        `json:"StartTime"`
+	EndTime         time.Time        `json:"EndTime"`
+	ImageID         string           `json:"ImageID"`
+	RequireImage    bool             `json:"RequireImage"`
+	Message         string           `json:"Message"`
+	TaskName        string           `json:"TaskName"`
+	Description     string           `json:"Description"`
+	DifficultyLevel int              `json:"DifficultyLevel"`
+	DueTime         int              `json:"DueTime"`
+	Tags            models.TaskTag   `json:"Tags"`
+}
+
+// AdminListTasksWithBaseTask は userID が空文字なら全件、指定されていればそのユーザーのタスク一覧を
+// BaseTask の内容(タスク名・タグなど)と突き合わせて返す
+func AdminListTasksWithBaseTask(userID string) ([]AdminTaskRow, error) {
+	var rows []AdminTaskRow
+
+	query := models.DB.Model(&models.Task{}).
+		Select(`
+            tasks.task_id,
+            tasks.base_id,
+            tasks.user_id,
+            tasks.status,
+            tasks.start_time,
+            tasks.end_time,
+            tasks.image_id,
+            tasks.require_image,
+            tasks.message,
+            base_tasks.task_name,
+            base_tasks.description,
+            base_tasks.difficulty_level,
+            base_tasks.due_time,
+            base_tasks.tags
+        `).
+		Joins("JOIN base_tasks ON tasks.base_id = base_tasks.base_id")
+
+	if userID != "" {
+		query = query.Where("tasks.user_id = ?", userID)
+	}
+
+	err := query.Scan(&rows).Error
+	return rows, err
+}
