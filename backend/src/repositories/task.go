@@ -30,7 +30,7 @@ func GetUserTasks(userID string) ([]TaskResponse, error) {
             tasks.user_id, 
             base_tasks.task_name, 
             tasks.status, 
-            base_tasks.tags, 
+            base_tasks.tags AS tag,
             base_tasks.difficulty_level,
             base_tasks.description, 
             CAST(UNIX_TIMESTAMP(tasks.start_time) AS SIGNED) as start_date, 
