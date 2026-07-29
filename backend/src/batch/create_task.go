@@ -89,7 +89,7 @@ func CreateTask() error {
 				TaskID:       uuid,
 				BaseID:       baseTask.BaseID,
 				UserID:       userID,
-				Status:       models.TaskStatusPending,
+				Status:       models.TaskStatusIncomplete,
 				StartTime:    now,
 				EndTime:      endTime,
 				ImageID:      "", // 初期状態は空
