@@ -64,9 +64,9 @@ func TestCreateTask(t *testing.T) {
 		}
 
 		for _, task := range userTasks {
-			// 初期ステータスがPending（保留中）になっているか
-			if task.Status != models.TaskStatusPending {
-				t.Errorf("unexpected task status for task %s: got %v, want TaskStatusPending", task.TaskID, task.Status)
+			// 初期ステータスがIncomplete（未完了）になっているか
+			if task.Status != models.TaskStatusIncomplete {
+				t.Errorf("unexpected task status for task %s: got %v, want TaskStatusIncomplete", task.TaskID, task.Status)
 			}
 
 			// EndTime から正確な「日数（Days）」を逆算する（24時間で割って四捨五入）
