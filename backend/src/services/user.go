@@ -4,6 +4,7 @@ import (
 	"backend/models"
 	"backend/repositories"
 	"errors"
+	"math/rand/v2"
 	"time"
 
 	"gorm.io/gorm"
@@ -40,13 +41,35 @@ func RegisterUser(userID, userName, email string, req RegisterUserRequest) (*Reg
 
 	birthDate := time.Unix(req.BirthDate, 0).UTC()
 
+	// ランダムに選ぶための候補リスト
+	icons := []string{
+		"cactus",
+		"cafe",
+		"flower",
+		"game",
+		"pc",
+		"pineTree",
+		"rocketCat",
+		"space",
+		"tissue",
+	}
+
+	bgColors := []string{
+		"icon1", "icon2", "icon3", "icon4", 
+		"icon5", "icon6", "icon7", "icon8",
+	}
+
+	// ランダムにインデックスを生成して選択
+	randomIcon := icons[rand.IntN((len(icons)))]
+	randomBgColor := bgColors[rand.IntN(len(bgColors))]
+
 	user := &models.User{
 		UserID:     userID,
 		UserName:   userName,
 		BirthDate:  birthDate,
 		Mailadress: email,
-		Icon:       "pineTree",
-		BgColor:    "icon1",
+		Icon:       randomIcon,
+		BgColor:    randomBgColor,
 	}
 
 	userRoom := &models.UserRoom{
