@@ -58,6 +58,17 @@ func TestRegisterUser(t *testing.T) {
 		t.Fatalf("expected default lifestyle fields to be true: %+v", room) // register時点では全てデフォルト値(true)であることを確認する
 	}
 
+	var user models.User
+	if err := models.DB.First(&user, "user_id = ?", "user-001").Error; err != nil {
+		t.Fatalf("User not found: %v", err)
+	}
+	if user.Icon != "pineTree" {
+		t.Fatalf("unexpected Icon: %s", user.Icon)
+	}
+	if user.BgColor != "icon1" {
+		t.Fatalf("unexpected BgColor: %s", user.BgColor)
+	}
+
 	// ユーザー二人目を追加
 	req = services.RegisterUserRequest{
 		BirthDate:  926726400, // 1999-05-15 00:00:00 UTC
@@ -217,6 +228,50 @@ func TestUpdateUserSetting(t *testing.T) {
 	}
 	if user.UserName != "new-name" {
 		t.Fatalf("unexpected UserName: %s", user.UserName) // ユーザー名が更新されていなければ失敗
+	}
+	// icon/backgroundを指定しない場合はRegisterUser時のデフォルト値が維持される
+	if user.Icon != "pineTree" {
+		t.Fatalf("unexpected Icon: %s", user.Icon)
+	}
+	if user.BgColor != "icon1" {
+		t.Fatalf("unexpected BgColor: %s", user.BgColor)
+	}
+}
+
+// TestUpdateUserSetting_IconAndBackground はicon/backgroundが指定通り更新されることを確認する
+func TestUpdateUserSetting_IconAndBackground(t *testing.T) {
+
+	truncateUsersAndRooms(t)
+
+	registerReq := services.RegisterUserRequest{
+		BirthDate:  946684800,
+		LivingType: "alone",
+	}
+	if _, err := services.RegisterUser("user-001", "syatyo", "syatyo@example.com", registerReq); err != nil {
+		t.Fatalf("RegisterUser failed: %v", err)
+	}
+
+	icon := "dog"
+	bgColor := "icon2"
+
+	req := services.UserSettingRequest{
+		UserName: "new-name",
+		Icon:     &icon,
+		BgColor:  &bgColor,
+	}
+	if err := services.UpdateUserSetting("user-001", req); err != nil {
+		t.Fatalf("UpdateUserSetting failed: %v", err)
+	}
+
+	var user models.User
+	if err := models.DB.First(&user, "user_id = ?", "user-001").Error; err != nil {
+		t.Fatalf("failed to find User: %v", err)
+	}
+	if user.Icon != "dog" {
+		t.Fatalf("unexpected Icon: %s", user.Icon)
+	}
+	if user.BgColor != "icon2" {
+		t.Fatalf("unexpected BgColor: %s", user.BgColor)
 	}
 }
 

@@ -45,6 +45,8 @@ func RegisterUser(userID, userName, email string, req RegisterUserRequest) (*Reg
 		UserName:   userName,
 		BirthDate:  birthDate,
 		Mailadress: email,
+		Icon:       "pineTree",
+		BgColor:    "icon1",
 	}
 
 	userRoom := &models.UserRoom{
@@ -164,14 +166,17 @@ func UpdateUserLifestyle(userID string, req LifestyleRequest) error {
 
 // UserSettingRequest は PUT /app/user/setting のリクエストボディ
 type UserSettingRequest struct {
-	UserName string `json:"userName"` // 変更後のユーザー名
+	UserName string  `json:"userName"`         // 変更後のユーザー名
+	Icon     *string `json:"icon"`             // 変更後のアイコン識別子(任意)
+	BgColor  *string `json:"background"`       // 変更後の背景識別子(任意)
 }
 
-// UpdateUserSetting はユーザー名を更新する
+// UpdateUserSetting はユーザー名・アイコン・背景を更新する
+// Icon/BgColor はリクエストに含まれない場合(nil)は既存値を維持する
 func UpdateUserSetting(userID string, req UserSettingRequest) error {
 	if req.UserName == "" { // 空文字は許可しない
 		return errors.New("userName は必須です")
 	}
 
-	return repositories.UpdateUserName(userID, req.UserName) // リポジトリ経由でDBを更新する
+	return repositories.UpdateUserSetting(userID, req.UserName, req.Icon, req.BgColor) // リポジトリ経由でDBを更新する
 }
