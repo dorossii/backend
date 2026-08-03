@@ -194,7 +194,7 @@
     users: loadUsers,
     "base-tasks": loadBaseTasks,
     tasks: loadTasks,
-    friendships: renderFriendships,
+    friendships: loadFriendships,
   };
 
   navItems.forEach(function (item) {
@@ -246,6 +246,13 @@
     }
 
     users.forEach(function (user) {
+      var editNameBtn = el("button", {
+        className: "btn btn-secondary btn-sm",
+        text: "名前を編集",
+        onClick: function () {
+          openEditUserNameModal(user);
+        },
+      });
       var editBtn = el("button", {
         className: "btn btn-secondary btn-sm",
         text: "HP/汚れを編集",
@@ -261,10 +268,35 @@
         el("td", { text: String(user.HealthPoint) }),
         el("td", { text: String(user.DirtLevel) }),
         el("td", { text: String(user.Combo) }),
-        el("td", { className: "row-actions" }, [editBtn]),
+        el("td", { className: "row-actions" }, [editNameBtn, editBtn]),
       ]);
       usersTbody.appendChild(row);
     });
+  }
+
+  function openEditUserNameModal(user) {
+    openModal(
+      "ユーザー名の編集: " + user.UserName,
+      [{ key: "UserName", label: "ユーザー名", type: "text", value: user.UserName }],
+      function (values) {
+        if (!values.UserName) {
+          showToast("ユーザー名は必須です", true);
+          return;
+        }
+        apiRequest("users/" + encodeURIComponent(user.UserID) + "/name", {
+          method: "PUT",
+          body: values,
+        })
+          .then(function () {
+            closeModal();
+            showToast("更新しました", false);
+            loadUsers();
+          })
+          .catch(function (err) {
+            showToast(err.message, true);
+          });
+      }
+    );
   }
 
   function openEditUserStatsModal(user) {
@@ -687,6 +719,24 @@
 
   var friendshipsTbody = document.getElementById("friendships-tbody");
   var friendshipRows = [];
+  var userNamesById = {};
+
+  // ユーザー名解決用にユーザー一覧を取得し、UserID -> UserName のマップを更新してから描画する
+  function loadFriendships() {
+    apiRequest("users")
+      .then(function (data) {
+        var users = (data && data.users) || [];
+        userNamesById = {};
+        users.forEach(function (user) {
+          userNamesById[user.UserID] = user.UserName;
+        });
+        renderFriendships();
+      })
+      .catch(function (err) {
+        showToast(err.message, true);
+        renderFriendships();
+      });
+  }
 
   function renderFriendships() {
     clearChildren(friendshipsTbody);
@@ -694,7 +744,7 @@
     if (friendshipRows.length === 0) {
       friendshipsTbody.appendChild(
         el("tr", { className: "empty-row" }, [
-          el("td", { attrs: { colspan: "4" }, text: "「フレンド関係を作成」から操作対象を追加してください" }),
+          el("td", { attrs: { colspan: "6" }, text: "「フレンド関係を作成」から操作対象を追加してください" }),
         ])
       );
       return;
@@ -732,7 +782,9 @@
 
       var row = el("tr", {}, [
         el("td", { text: pair.userID }),
+        el("td", { text: userNamesById[pair.userID] || "-" }),
         el("td", { text: pair.friendID }),
+        el("td", { text: userNamesById[pair.friendID] || "-" }),
         el("td", { text: FRIEND_STATUSES[pair.status] || "-" }),
         el("td", { className: "row-actions" }, [statusBtn, deleteBtn]),
       ]);

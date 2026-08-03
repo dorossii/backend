@@ -136,7 +136,7 @@ func TestCreateTaskForUser_Success(t *testing.T) {
 		if task.UserID != user.UserID {
 			t.Fatalf("unexpected UserID: %s", task.UserID)
 		}
-		if task.Status != models.TaskStatusPending {
+		if task.Status != models.TaskStatusIncomplete {
 			t.Fatalf("unexpected Status: %v", task.Status)
 		}
 		if task.ImageID != "" {

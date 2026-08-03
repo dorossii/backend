@@ -62,7 +62,7 @@ func CreateTaskForUser(userID string) error {
 			TaskID:       uuid,
 			BaseID:       baseTask.BaseID,
 			UserID:       userID,
-			Status:       models.TaskStatusPending,
+			Status:       models.TaskStatusIncomplete,
 			StartTime:    now,
 			EndTime:      endTime,
 			ImageID:      "", // 初期状態は空
@@ -226,6 +226,14 @@ func ListUsers(search string) ([]models.User, error) {
 	}
 	err := query.Find(&users).Error
 	return users, err
+}
+
+// UpdateUserName はユーザー名のみを更新する
+func UpdateUserName(userID string, userName string) error {
+	return models.DB.
+		Model(&models.User{}).
+		Where("user_id = ?", userID).
+		Update("user_name", userName).Error
 }
 
 // UpdateUserStats はHealthPoint/DirtLevelを直接更新する
