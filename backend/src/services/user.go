@@ -4,6 +4,7 @@ import (
 	"backend/models"
 	"backend/repositories"
 	"errors"
+	"math/rand/v2"
 	"time"
 
 	"gorm.io/gorm"
@@ -40,13 +41,37 @@ func RegisterUser(userID, userName, email string, req RegisterUserRequest) (*Reg
 
 	birthDate := time.Unix(req.BirthDate, 0).UTC()
 
+	// ランダムに選ぶための候補リスト
+	icons := []string{
+		"cactus",
+		"cafe",
+		"flower",
+		"game",
+		"pc",
+		"pineTree",
+		"rocketCat",
+		"space",
+		"tissue",
+	}
+
+	bgColors := []string{
+		"icon1", "icon2", "icon3", "icon4", 
+		"icon5", "icon6", "icon7", "icon8",
+	}
+
+	// ランダムにインデックスを生成して選択
+	randomIcon := icons[rand.IntN((len(icons)))]
+	randomBgColor := bgColors[rand.IntN(len(bgColors))]
+
 	user := &models.User{
-		UserID:     userID,
-		UserName:   userName,
-		BirthDate:  birthDate,
-		Mailadress: email,
-		Icon:       "pineTree",
-		BgColor:    "icon1",
+		UserID:      userID,
+		UserName:    userName,
+		BirthDate:   birthDate,
+		Mailadress:  email,
+		HealthPoint: 1000,
+		DirtLevel:   1,
+		Icon:       randomIcon,
+		BgColor:    randomBgColor,
 	}
 
 	userRoom := &models.UserRoom{
@@ -166,9 +191,9 @@ func UpdateUserLifestyle(userID string, req LifestyleRequest) error {
 
 // UserSettingRequest は PUT /app/user/setting のリクエストボディ
 type UserSettingRequest struct {
-	UserName string  `json:"userName"`         // 変更後のユーザー名
-	Icon     *string `json:"icon"`             // 変更後のアイコン識別子(任意)
-	BgColor  *string `json:"background"`       // 変更後の背景識別子(任意)
+	UserName string  `json:"userName"`   // 変更後のユーザー名
+	Icon     *string `json:"icon"`       // 変更後のアイコン識別子(任意)
+	BgColor  *string `json:"background"` // 変更後の背景識別子(任意)
 }
 
 // UpdateUserSetting はユーザー名・アイコン・背景を更新する
