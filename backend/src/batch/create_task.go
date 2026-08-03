@@ -56,6 +56,27 @@ func CreateTask() error {
 		return errors.New("insufficient base tasks available (minimum 2 required)")
 	}
 
+	// 過去に各ユーザーへ割り当て済みの BaseID を全件取得
+	// （ステータスに関わらず、これまでに割り当てられたことがあるタスクを重複除外対象にする）
+	var assignedRows []struct {
+		UserID string
+		BaseID string
+	}
+	if err := models.DB.Model(&models.Task{}).
+		Select("user_id, base_id").
+		Find(&assignedRows).Error; err != nil {
+		return err
+	}
+
+	// ユーザーごとに「過去に割り当て済みの BaseID セット」を構築
+	assignedByUser := make(map[string]map[string]bool, len(userIDs))
+	for _, row := range assignedRows {
+		if assignedByUser[row.UserID] == nil {
+			assignedByUser[row.UserID] = make(map[string]bool)
+		}
+		assignedByUser[row.UserID][row.BaseID] = true
+	}
+
 	// 乱数生成器の初期化
 	r := rand.New(rand.NewSource(utils.NowJST().UnixNano()))
 
@@ -64,12 +85,29 @@ func CreateTask() error {
 
 	// 各ユーザーに対してランダムに2つのタスクを選出してスライスに格納
 	for _, userID := range userIDs {
+		assignedSet := assignedByUser[userID]
+
+		// まだ割り当てたことのない BaseTask のみを候補にする
+		candidates := make([]models.BaseTask, 0, len(baseTasks))
+		for _, bt := range baseTasks {
+			if !assignedSet[bt.BaseID] {
+				candidates = append(candidates, bt)
+			}
+		}
+
+		// 未割り当ての候補が必要数に満たない場合、
+		// 「全BaseTaskを消化した」とみなして候補を全BaseTaskにリセットする
+		// （＝新しい周回として再び選出可能にする）
+		if len(candidates) < tasksPerUser {
+			candidates = baseTasks
+		}
+
 		// 同じユーザーに同じタスクが重複して割り当たらないようにインデックスをシャッフル
-		shuffledIndices := r.Perm(len(baseTasks))
+		shuffledIndices := r.Perm(len(candidates))
 
 		// 上位2つのランダムなタスクを選択
 		for i := 0; i < tasksPerUser; i++ {
-			baseTask := baseTasks[shuffledIndices[i]]
+			baseTask := candidates[shuffledIndices[i]]
 
 			// DueTime（期限）の仕様に合わせて終了時間を計算
 			endTime := now.Add(time.Duration(baseTask.DueTime) * 24 * time.Hour)
