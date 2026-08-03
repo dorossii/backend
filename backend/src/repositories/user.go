@@ -228,6 +228,14 @@ func ListUsers(search string) ([]models.User, error) {
 	return users, err
 }
 
+// UpdateUserName はユーザー名のみを更新する
+func UpdateUserName(userID string, userName string) error {
+	return models.DB.
+		Model(&models.User{}).
+		Where("user_id = ?", userID).
+		Update("user_name", userName).Error
+}
+
 // UpdateUserStats はHealthPoint/DirtLevelを直接更新する
 func UpdateUserStats(userID string, healthPoint *int, dirtLevel *int) error {
 	updates := map[string]interface{}{}

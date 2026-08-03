@@ -33,6 +33,27 @@ func AdminGetUser(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, user)
 }
 
+func AdminUpdateUserName(ctx echo.Context) error {
+	userID := ctx.Param("id")
+
+	var req struct {
+		UserName string `json:"UserName"`
+	}
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
+	}
+
+	user, err := services.AdminUpdateUserName(userID, req.UserName)
+	if err != nil {
+		if errors.Is(err, services.ErrUserNotFound) {
+			return ctx.JSON(http.StatusNotFound, map[string]string{"error": err.Error()})
+		}
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+	}
+
+	return ctx.JSON(http.StatusOK, user)
+}
+
 func AdminUpdateUserStats(ctx echo.Context) error {
 	userID := ctx.Param("id")
 

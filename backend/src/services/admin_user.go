@@ -22,6 +22,22 @@ func AdminGetUser(userID string) (*models.User, error) {
 	return user, err
 }
 
+func AdminUpdateUserName(userID string, userName string) (*models.User, error) {
+	if userName == "" {
+		return nil, errors.New("userName は必須です")
+	}
+
+	if _, err := AdminGetUser(userID); err != nil {
+		return nil, err
+	}
+
+	if err := repositories.UpdateUserName(userID, userName); err != nil {
+		return nil, err
+	}
+
+	return AdminGetUser(userID)
+}
+
 type AdminUserStatsUpdate struct {
 	HealthPoint *int `json:"HealthPoint"`
 	DirtLevel   *int `json:"DirtLevel"`
