@@ -41,12 +41,14 @@ func RegisterUser(userID, userName, email string, req RegisterUserRequest) (*Reg
 	birthDate := time.Unix(req.BirthDate, 0).UTC()
 
 	user := &models.User{
-		UserID:     userID,
-		UserName:   userName,
-		BirthDate:  birthDate,
-		Mailadress: email,
-		Icon:       "pineTree",
-		BgColor:    "icon1",
+		UserID:      userID,
+		UserName:    userName,
+		BirthDate:   birthDate,
+		Mailadress:  email,
+		Icon:        "pineTree",
+		BgColor:     "icon1",
+		HealthPoint: 1000,
+		DirtLevel:   1,
 	}
 
 	userRoom := &models.UserRoom{
@@ -166,9 +168,9 @@ func UpdateUserLifestyle(userID string, req LifestyleRequest) error {
 
 // UserSettingRequest は PUT /app/user/setting のリクエストボディ
 type UserSettingRequest struct {
-	UserName string  `json:"userName"`         // 変更後のユーザー名
-	Icon     *string `json:"icon"`             // 変更後のアイコン識別子(任意)
-	BgColor  *string `json:"background"`       // 変更後の背景識別子(任意)
+	UserName string  `json:"userName"`   // 変更後のユーザー名
+	Icon     *string `json:"icon"`       // 変更後のアイコン識別子(任意)
+	BgColor  *string `json:"background"` // 変更後の背景識別子(任意)
 }
 
 // UpdateUserSetting はユーザー名・アイコン・背景を更新する
