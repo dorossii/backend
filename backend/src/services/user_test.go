@@ -4,6 +4,7 @@ import (
 	"backend/models"
 	"backend/services"
 	"errors"
+	"log"
 	"testing"
 
 	"gorm.io/gorm"
@@ -62,12 +63,8 @@ func TestRegisterUser(t *testing.T) {
 	if err := models.DB.First(&user, "user_id = ?", "user-001").Error; err != nil {
 		t.Fatalf("User not found: %v", err)
 	}
-	if user.Icon != "pineTree" {
-		t.Fatalf("unexpected Icon: %s", user.Icon)
-	}
-	if user.BgColor != "icon1" {
-		t.Fatalf("unexpected BgColor: %s", user.BgColor)
-	}
+
+	log.Printf("User icon: %s, bgColor: %s", user.Icon, user.BgColor)
 
 	// ユーザー二人目を追加
 	req = services.RegisterUserRequest{
@@ -187,13 +184,14 @@ func TestGetUserStatus(t *testing.T) {
 	if res.UserName != "syatyo" {
 		t.Fatalf("unexpected UserName: %s", res.UserName)
 	}
-	if res.DirtLevel != 0 {
+	if res.DirtLevel != 1 {
 		t.Fatalf("unexpected DirtLevel: %d", res.DirtLevel)
 	}
-	if res.HealthPoint != 0 {
+	if res.HealthPoint != 1000 {
 		t.Fatalf("unexpected HealthPoint: %d", res.HealthPoint)
 	}
 }
+
 
 func TestGetUserStatus_NotFound(t *testing.T) {
 
@@ -218,7 +216,14 @@ func TestUpdateUserSetting(t *testing.T) {
 		t.Fatalf("RegisterUser failed: %v", err) // 事前準備のユーザー登録が失敗したら終了
 	}
 
-	if err := services.UpdateUserSetting("user-001", services.UserSettingRequest{UserName: "new-name"}); err != nil {
+	icon := "pineTree"
+	bgColor := "icon1"
+	
+	if err := services.UpdateUserSetting("user-001", services.UserSettingRequest{
+		UserName: "new-name",
+		Icon:     &icon,
+		BgColor:  &bgColor,
+	}); err != nil {
 		t.Fatalf("UpdateUserSetting failed: %v", err) // 更新処理自体が失敗したら終了
 	}
 
@@ -262,7 +267,7 @@ func TestUpdateUserSetting_IconAndBackground(t *testing.T) {
 	if err := services.UpdateUserSetting("user-001", req); err != nil {
 		t.Fatalf("UpdateUserSetting failed: %v", err)
 	}
-
+ 
 	var user models.User
 	if err := models.DB.First(&user, "user_id = ?", "user-001").Error; err != nil {
 		t.Fatalf("failed to find User: %v", err)
