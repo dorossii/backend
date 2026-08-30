@@ -16,14 +16,14 @@ func DeleteTaskTicker() {
 
 		// 最初に次の午前0時まで待機
 		<-timer.C
-		CreateTask()
+		DeleteTask()
 
 		// 以降は24時間ごとに実行
 		ticker := time.NewTicker(24 * time.Hour)
 		defer ticker.Stop()
 
 		for range ticker.C {
-			CreateTask()
+			DeleteTask()
 		}
 	}()
 }
