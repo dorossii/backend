@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+	"errors"
 )
 
 // services.GetTasksのテスト
@@ -1438,4 +1439,157 @@ func TestGetTaskImage_NotFound(t *testing.T) {
 	}
 }
 
+func TestPutMultiTasksStatus_Complete(t *testing.T) {
+	TestRegisterUser(t)
 
+	baseTask := models.BaseTask{
+		BaseID:          "base-001",
+		DifficultyLevel: 1,
+	}
+
+	if err := models.DB.Create(&baseTask).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	task1 := models.Task{
+		TaskID:    "task-MultiComplete-001",
+		BaseID:    "base-001",
+		UserID:    "user-001",
+		Status:    models.TaskStatusIncomplete,
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
+	}
+
+	task2 := models.Task{
+		TaskID:    "task-MultiComplete-002",
+		BaseID:    "base-001",
+		UserID:    "user-001",
+		Status:    models.TaskStatusIncomplete,
+		StartTime: utils.NowJST().Add(-1 * time.Hour),
+		EndTime:   utils.NowJST().Add(1 * time.Hour),
+	}
+
+	if err := models.DB.Create(&task1).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	if err := models.DB.Create(&task2).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	req := []services.PutMultiTasksStatusRequest{
+		{
+			ID:     task1.TaskID,
+			Status: services.TaskStatusComplete,
+		},
+		{
+			ID:     task2.TaskID,
+			Status: services.TaskStatusPending,
+		},
+	}
+
+	err := services.PutMultiTasksStatus("user-001", req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var updatedTask1 models.Task
+	if err := models.DB.First(&updatedTask1, "task_id = ?", task1.TaskID).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	var updatedTask2 models.Task
+	if err := models.DB.First(&updatedTask2, "task_id = ?", task2.TaskID).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	if updatedTask1.Status != models.TaskStatusCompleted {
+		t.Fatalf("unexpected status: %v", updatedTask1.Status)
+	}
+
+	if updatedTask2.Status != models.TaskStatusPending {
+		t.Fatalf("unexpected status: %v", updatedTask2.Status)
+	}
+}
+
+func TestPutMultiTasksStatus_Error(t *testing.T) {
+	t.Run("存在しないタスク", func(t *testing.T) {
+		TestRegisterUser(t)
+
+		status := services.TaskStatusComplete
+
+		req := []services.PutMultiTasksStatusRequest{
+			{
+				ID:     "not-found-task",
+				Status: status,
+			},
+		}
+
+		err := services.PutMultiTasksStatus("user-001", req)
+		if !errors.Is(err, services.ErrTaskNotFound) {
+			t.Fatalf("expected ErrTaskNotFound, got %v", err)
+		}
+	})
+
+	t.Run("他ユーザーのタスク", func(t *testing.T) {
+		TestRegisterUser(t)
+
+		task := models.Task{
+			TaskID:    "task-other-user",
+			BaseID:    "base-001",
+			UserID:    "user-002",
+			Status:    models.TaskStatusIncomplete,
+			StartTime: utils.NowJST().Add(-1 * time.Hour),
+			EndTime:   utils.NowJST().Add(1 * time.Hour),
+		}
+
+		if err := models.DB.Create(&task).Error; err != nil {
+			t.Fatal(err)
+		}
+
+		status := services.TaskStatusComplete
+
+		req := []services.PutMultiTasksStatusRequest{
+			{
+				ID:     task.TaskID,
+				Status: status,
+			},
+		}
+
+		err := services.PutMultiTasksStatus("user-001", req)
+		if !errors.Is(err, services.ErrTaskPermissionDenied) {
+			t.Fatalf("expected ErrTaskPermissionDenied, got %v", err)
+		}
+	})
+
+	t.Run("期限切れタスク", func(t *testing.T) {
+		TestRegisterUser(t)
+
+		task := models.Task{
+			TaskID:    "task-expired",
+			BaseID:    "base-001",
+			UserID:    "user-001",
+			Status:    models.TaskStatusIncomplete,
+			StartTime: utils.NowJST().Add(-2 * time.Hour),
+			EndTime:   utils.NowJST().Add(-1 * time.Hour),
+		}
+
+		if err := models.DB.Create(&task).Error; err != nil {
+			t.Fatal(err)
+		}
+
+		status := services.TaskStatusComplete
+
+		req := []services.PutMultiTasksStatusRequest{
+			{
+				ID:     task.TaskID,
+				Status: status,
+			},
+		}
+
+		err := services.PutMultiTasksStatus("user-001", req)
+		if !errors.Is(err, services.ErrTaskExpired) {
+			t.Fatalf("expected ErrTaskExpired, got %v", err)
+		}
+	})
+}
