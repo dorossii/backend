@@ -21,7 +21,7 @@ func TestMain(m *testing.M) {
 }
 
 func createTestUser() error {
-	// テスト用データの準備 (ユーザー2人)
+	// テスト用データの準備 (ユーザー4人)
 	users := []models.User{
 		{
 			UserID:      "user-001",
@@ -64,6 +64,7 @@ func createTestUser() error {
 			BgColor:     "#90ee90",
 		},
 	}
+
 	if err := models.DB.Create(&users).Error; err != nil {
 		return fmt.Errorf("failed to create dummy users: %v", err)
 	}
