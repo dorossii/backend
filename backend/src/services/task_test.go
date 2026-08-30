@@ -1442,15 +1442,6 @@ func TestGetTaskImage_NotFound(t *testing.T) {
 func TestPutMultiTasksStatus_Complete(t *testing.T) {
 	TestRegisterUser(t)
 
-	baseTask := models.BaseTask{
-		BaseID:          "base-001",
-		DifficultyLevel: 1,
-	}
-
-	if err := models.DB.Create(&baseTask).Error; err != nil {
-		t.Fatal(err)
-	}
-
 	task1 := models.Task{
 		TaskID:    "task-MultiComplete-001",
 		BaseID:    "base-001",
@@ -1520,7 +1511,7 @@ func TestPutMultiTasksStatus_Error(t *testing.T) {
 
 		req := []services.PutMultiTasksStatusRequest{
 			{
-				ID:     "not-found-task",
+				ID:     "not-found-mulit-task",
 				Status: status,
 			},
 		}
@@ -1535,7 +1526,7 @@ func TestPutMultiTasksStatus_Error(t *testing.T) {
 		TestRegisterUser(t)
 
 		task := models.Task{
-			TaskID:    "task-other-user",
+			TaskID:    "mulit-task-other-user",
 			BaseID:    "base-001",
 			UserID:    "user-002",
 			Status:    models.TaskStatusIncomplete,
@@ -1566,7 +1557,7 @@ func TestPutMultiTasksStatus_Error(t *testing.T) {
 		TestRegisterUser(t)
 
 		task := models.Task{
-			TaskID:    "task-expired",
+			TaskID:    "mulit-task-expired",
 			BaseID:    "base-001",
 			UserID:    "user-001",
 			Status:    models.TaskStatusIncomplete,
