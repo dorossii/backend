@@ -62,7 +62,7 @@ func CreateTaskForUser(userID string) error {
 			TaskID:       uuid,
 			BaseID:       baseTask.BaseID,
 			UserID:       userID,
-			Status:       models.TaskStatusPending,
+			Status:       models.TaskStatusIncomplete,
 			StartTime:    now,
 			EndTime:      endTime,
 			ImageID:      "", // 初期状態は空
@@ -137,12 +137,23 @@ func GetUser(UserID string) (*models.User, error) {
 	return &user, err
 }
 
-// UpdateUserName は指定したユーザーの表示名を更新する
-func UpdateUserName(userID string, userName string) error {
+// UpdateUserSetting は指定したユーザーの表示名・アイコン・背景を更新する
+// icon/bgColor が nil の場合はそのカラムを更新しない
+func UpdateUserSetting(userID string, userName string, icon *string, bgColor *string) error {
+	columns := map[string]interface{}{
+		"user_name": userName,
+	}
+	if icon != nil {
+		columns["icon"] = *icon
+	}
+	if bgColor != nil {
+		columns["bg_color"] = *bgColor
+	}
+
 	return models.DB.
-		Model(&models.User{}).              // Userテーブルを対象にする
-		Where("user_id = ?", userID).       // 更新対象を user_id で絞り込む
-		Update("user_name", userName).Error // user_name カラムのみ更新する
+		Model(&models.User{}).        // Userテーブルを対象にする
+		Where("user_id = ?", userID). // 更新対象を user_id で絞り込む
+		Updates(columns).Error
 }
 
 func UpdateAttackerSettings(userID string, targetUser string) error {
@@ -215,6 +226,14 @@ func ListUsers(search string) ([]models.User, error) {
 	}
 	err := query.Find(&users).Error
 	return users, err
+}
+
+// UpdateUserName はユーザー名のみを更新する
+func UpdateUserName(userID string, userName string) error {
+	return models.DB.
+		Model(&models.User{}).
+		Where("user_id = ?", userID).
+		Update("user_name", userName).Error
 }
 
 // UpdateUserStats はHealthPoint/DirtLevelを直接更新する

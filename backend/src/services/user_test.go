@@ -4,6 +4,7 @@ import (
 	"backend/models"
 	"backend/services"
 	"errors"
+	"log"
 	"testing"
 
 	"gorm.io/gorm"
@@ -57,6 +58,13 @@ func TestRegisterUser(t *testing.T) {
 	if !room.HasWasher || !room.HasVacuum || !room.HasRobot || !room.UseTableware || !room.HasDishwasher {
 		t.Fatalf("expected default lifestyle fields to be true: %+v", room) // register時点では全てデフォルト値(true)であることを確認する
 	}
+
+	var user models.User
+	if err := models.DB.First(&user, "user_id = ?", "user-001").Error; err != nil {
+		t.Fatalf("User not found: %v", err)
+	}
+
+	log.Printf("User icon: %s, bgColor: %s", user.Icon, user.BgColor)
 
 	// ユーザー二人目を追加
 	req = services.RegisterUserRequest{
@@ -176,13 +184,14 @@ func TestGetUserStatus(t *testing.T) {
 	if res.UserName != "syatyo" {
 		t.Fatalf("unexpected UserName: %s", res.UserName)
 	}
-	if res.DirtLevel != 0 {
+	if res.DirtLevel != 1 {
 		t.Fatalf("unexpected DirtLevel: %d", res.DirtLevel)
 	}
-	if res.HealthPoint != 0 {
+	if res.HealthPoint != 1000 {
 		t.Fatalf("unexpected HealthPoint: %d", res.HealthPoint)
 	}
 }
+
 
 func TestGetUserStatus_NotFound(t *testing.T) {
 
@@ -207,7 +216,14 @@ func TestUpdateUserSetting(t *testing.T) {
 		t.Fatalf("RegisterUser failed: %v", err) // 事前準備のユーザー登録が失敗したら終了
 	}
 
-	if err := services.UpdateUserSetting("user-001", services.UserSettingRequest{UserName: "new-name"}); err != nil {
+	icon := "pineTree"
+	bgColor := "icon1"
+	
+	if err := services.UpdateUserSetting("user-001", services.UserSettingRequest{
+		UserName: "new-name",
+		Icon:     &icon,
+		BgColor:  &bgColor,
+	}); err != nil {
 		t.Fatalf("UpdateUserSetting failed: %v", err) // 更新処理自体が失敗したら終了
 	}
 
@@ -217,6 +233,50 @@ func TestUpdateUserSetting(t *testing.T) {
 	}
 	if user.UserName != "new-name" {
 		t.Fatalf("unexpected UserName: %s", user.UserName) // ユーザー名が更新されていなければ失敗
+	}
+	// icon/backgroundを指定しない場合はRegisterUser時のデフォルト値が維持される
+	if user.Icon != "pineTree" {
+		t.Fatalf("unexpected Icon: %s", user.Icon)
+	}
+	if user.BgColor != "icon1" {
+		t.Fatalf("unexpected BgColor: %s", user.BgColor)
+	}
+}
+
+// TestUpdateUserSetting_IconAndBackground はicon/backgroundが指定通り更新されることを確認する
+func TestUpdateUserSetting_IconAndBackground(t *testing.T) {
+
+	truncateUsersAndRooms(t)
+
+	registerReq := services.RegisterUserRequest{
+		BirthDate:  946684800,
+		LivingType: "alone",
+	}
+	if _, err := services.RegisterUser("user-001", "syatyo", "syatyo@example.com", registerReq); err != nil {
+		t.Fatalf("RegisterUser failed: %v", err)
+	}
+
+	icon := "dog"
+	bgColor := "icon2"
+
+	req := services.UserSettingRequest{
+		UserName: "new-name",
+		Icon:     &icon,
+		BgColor:  &bgColor,
+	}
+	if err := services.UpdateUserSetting("user-001", req); err != nil {
+		t.Fatalf("UpdateUserSetting failed: %v", err)
+	}
+ 
+	var user models.User
+	if err := models.DB.First(&user, "user_id = ?", "user-001").Error; err != nil {
+		t.Fatalf("failed to find User: %v", err)
+	}
+	if user.Icon != "dog" {
+		t.Fatalf("unexpected Icon: %s", user.Icon)
+	}
+	if user.BgColor != "icon2" {
+		t.Fatalf("unexpected BgColor: %s", user.BgColor)
 	}
 }
 

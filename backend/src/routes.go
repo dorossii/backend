@@ -156,6 +156,7 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 			userAdmin.GET("", controllers.AdminListUsers)
 			userAdmin.GET("/:id", controllers.AdminGetUser)
 			userAdmin.PUT("/:id/stats", controllers.AdminUpdateUserStats)
+			userAdmin.PUT("/:id/name", controllers.AdminUpdateUserName)
 		}
 	}
 
