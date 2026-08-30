@@ -53,6 +53,16 @@ func createTestUser() error {
 			Combo:       2,
 			BgColor:     "#90ee90",
 		},
+		{
+			UserID:      "user-004",
+			UserName:    "saburo",
+			BirthDate:   time.Date(2004, 4, 4, 0, 0, 0, 0, time.UTC),
+			Mailadress:  "user4@example.com",
+			HealthPoint: 0,
+			DirtLevel:   700,
+			Combo:       2,
+			BgColor:     "#90ee90",
+		},
 	}
 	if err := models.DB.Create(&users).Error; err != nil {
 		return fmt.Errorf("failed to create dummy users: %v", err)
