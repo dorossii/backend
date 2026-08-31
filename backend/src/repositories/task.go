@@ -185,3 +185,26 @@ func AdminListTasksWithBaseTask(userID string) ([]AdminTaskRow, error) {
 	err := query.Scan(&rows).Error
 	return rows, err
 }
+
+// フレンド且つRemindNoticeに保存されていないユーザーをランダムで一件取得する
+func GetMessageUserId(userID string) (string, error) {
+	var friendID string
+
+	err := models.DB.
+		Model(&models.FriendShips{}).
+		Where("user_id = ?", userID).
+		Where("status = ?", models.FriendStatusAccepted). // 実際の「友達」ステータスに合わせる
+		Where(`
+			NOT EXISTS (
+				SELECT 1
+				FROM remind_notices
+				WHERE remind_notices.user_id = friend_ships.friend_id
+				AND remind_notices.sender_id = ?
+			)
+		`, userID).
+		Order("RAND()").
+		Limit(1).
+		Pluck("friend_id", &friendID).Error
+
+	return friendID, err
+}
