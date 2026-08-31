@@ -219,8 +219,10 @@ func PostUploadImage(userID string, taskID string, fileHeader *multipart.FileHea
 }
 
 type PutTaskStatusResponse struct {
-	IsChanged    bool
-	RequireImage bool
+	IsChanged    		bool
+	RequireImage 		bool
+	MessageUserId      	string
+	MessageUserName    	string
 }
 
 const (
@@ -246,6 +248,20 @@ func ParseTaskStatus(s string) (models.TaskStatus, error) {
 	default:
 		return 0, ErrInvalidTaskStatus
 	}
+}
+
+// メッセージIDを取得
+func GetMessageUserId(userID string) (string,string, error) {
+	userID, err := repositories.GetMessageUserId(userID)
+	//取得したuseridを元にそのユーザーの名前を取得
+	username, err := repositories.GetUserName(userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "","", ErrTaskNotFound
+		}
+		return "", "", err
+	}
+	return userID, username, nil
 }
 
 // 　タスクステータス更新(完了•未完了)
@@ -362,9 +378,16 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			return PutTaskStatusResponse{}, err
 		}
 
+		messageUserID, messageUserName, err := GetMessageUserId(userID)
+		if err != nil {
+			return PutTaskStatusResponse{}, err
+		}
+
 		return PutTaskStatusResponse{
 			IsChanged:    true,
 			RequireImage: false,
+			MessageUserId:   messageUserID,
+			MessageUserName: messageUserName,
 		}, nil
 
 	case models.TaskStatusPending:
