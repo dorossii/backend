@@ -252,3 +252,13 @@ func UpdateUserStats(userID string, healthPoint *int, dirtLevel *int) error {
 	return models.DB.Model(&models.User{}).Where("user_id = ?", userID).Updates(updates).Error
 }
 
+
+func GetUserName(userID string)	(string, error) {
+	var user models.User
+	err := models.DB.Select("user_name").First(&user, "user_id = ?", userID).Error
+	if err != nil {
+		return "", err
+	}
+	
+	return user.UserName, nil
+}
