@@ -638,9 +638,16 @@ func PutMultiTasksStatus(userID string, req []PutMultiTasksStatusRequest) error 
 
 	var completedTasks []PutMultiTasksStatusRequest
 	var pendingTasks []PutMultiTasksStatusRequest
+	taskIDs := make(map[string]struct{})
 
-	// ステータスごとに振り分け
+	// ステータスごとに振り分け・タスクID重複除外
 	for _, taskReq := range req {
+		if _, exists := taskIDs[taskReq.ID]; exists {
+			continue
+		}
+
+		taskIDs[taskReq.ID] = struct{}{}
+
 		switch taskReq.Status {
 		case TaskStatusComplete:
 			completedTasks = append(completedTasks, taskReq)
