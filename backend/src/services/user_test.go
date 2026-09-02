@@ -190,6 +190,18 @@ func TestGetUserStatus(t *testing.T) {
 	if res.HealthPoint != 1000 {
 		t.Fatalf("unexpected HealthPoint: %d", res.HealthPoint)
 	}
+	if res.BirthDate != 946684800 {
+		t.Fatalf("unexpected BirthDate: %d", res.BirthDate)
+	}
+	if res.LivingType != "alone" {
+		t.Fatalf("unexpected LivingType: %s", res.LivingType)
+	}
+	if res.UserIcon == "" {
+		t.Fatalf("expected UserIcon to be set")
+	}
+	if res.BgColors == "" {
+		t.Fatalf("expected BgColors to be set")
+	}
 }
 
 
