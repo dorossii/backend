@@ -60,6 +60,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: dorossii/infra
+          ref: main
           token: ${{ secrets.INFRA_REPO_PAT }}
 
       - name: Update image tag
@@ -73,7 +74,7 @@ jobs:
           git diff --quiet && exit 0
           git add docker-compose.yaml
           git commit -m "chore: bump backend image to ${{ needs.build-and-push.outputs.image_tag }}"
-          git push
+          git push origin HEAD:main
 
   deploy:
     runs-on: ubuntu-latest
