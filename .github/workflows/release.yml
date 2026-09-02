@@ -128,10 +128,20 @@ jobs:
             -H "Content-Type: application/json" \
             -d "$(jq -n --arg content "🚀 **サーバーへのデプロイを開始します**" '{content: $content}')"
 
-      - name: Trigger deploy webhook
+      - name: Trigger deploy webhook (最大3回リトライ)
         run: |
-          curl -fsS -X POST "${{ secrets.DEPLOY_WEBHOOK_URL }}" \
-            -H "X-Deploy-Secret: ${{ secrets.DEPLOY_WEBHOOK_SECRET }}"
+          for i in 1 2 3; do
+            echo "デプロイ試行 $i/3"
+            if curl -fsS -X POST "${{ secrets.DEPLOY_WEBHOOK_URL }}" \
+              -H "X-Deploy-Secret: ${{ secrets.DEPLOY_WEBHOOK_SECRET }}"; then
+              echo "デプロイ成功 (webhookが実際の反映を確認済み)"
+              exit 0
+            fi
+            echo "デプロイ失敗、リトライします..."
+            sleep 15
+          done
+          echo "デプロイが3回とも失敗しました"
+          exit 1
 
       - name: デプロイ完了をヘルスチェックで確認
         run: |
