@@ -111,8 +111,12 @@ func RegisterUser(userID, userName, email string, req RegisterUserRequest) (*Reg
 type UserStatusResponse struct {
 	UserID      string `json:"userId"`
 	UserName    string `json:"userName"`
+	UserIcon    string `json:"userIcon"`
+	BgColors    string `json:"bgColors"`
 	DirtLevel   int    `json:"DirtLevel"`
 	HealthPoint int    `json:"HealthPoint"`
+	BirthDate   int64  `json:"BirthDate"`
+	LivingType  string `json:"livingType,omitempty"`
 }
 
 // GetUserStatus はホーム画面向けのユーザーステータスを取得する
@@ -122,12 +126,29 @@ func GetUserStatus(userID string) (*UserStatusResponse, error) {
 		return nil, err
 	}
 
-	return &UserStatusResponse{
+	res := &UserStatusResponse{
 		UserID:      user.UserID,
 		UserName:    user.UserName,
+		UserIcon:    user.Icon,
+		BgColors:    user.BgColor,
 		DirtLevel:   user.DirtLevel,
 		HealthPoint: user.HealthPoint,
-	}, nil
+		BirthDate:   user.BirthDate.Unix(),
+	}
+
+	// 生活環境情報はまだ未登録のユーザーも存在するため、無ければ省略する
+	room, err := repositories.GetUserRoom(userID)
+	if err == nil {
+		if room.IsAlone {
+			res.LivingType = "alone"
+		} else {
+			res.LivingType = "family"
+		}
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 // LifestyleRequest は生活環境情報の登録・編集リクエスト
