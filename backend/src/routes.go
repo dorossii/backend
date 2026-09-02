@@ -63,7 +63,7 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 
 	// ヘルスチェック（認証不要）
 	router.GET("/health", func(c echo.Context) error {
-		return c.JSON(200, map[string]string{"status": "ok"})
+		return c.JSON(200, map[string]string{"status": "ok", "marker": "e2e-deploy-verify"})
 	})
 
 	// friendグループ
