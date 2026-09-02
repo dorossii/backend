@@ -135,7 +135,7 @@ func PostUploadImageHandler(ctx echo.Context) error {
 	})
 }
 
-
+// タスクを認めない時に使うやつ
 type PutTaskStatusRequest struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
@@ -198,6 +198,30 @@ func PutTaskStatusHandler(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, echo.Map{
 		"isChanged":    result.IsChanged,
 		"requireImage": result.RequireImage,
+	})
+}
+
+func PutMultiTasksStatusHandler(ctx echo.Context) error {
+
+	userID := ctx.Get("UserID").(string)
+
+	var req []services.PutMultiTasksStatusRequest
+
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{
+			"error": "invalid request",
+		})
+	}
+
+	err := services.PutMultiTasksStatus(userID, req)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "internal server error",
+		})
+	}
+
+	return ctx.JSON(http.StatusOK, echo.Map{
+		"message": "tasks status updated successfully",
 	})
 }
 

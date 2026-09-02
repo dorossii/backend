@@ -55,7 +55,7 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 		user.GET("/tasks/pending", controllers.GetPendingTasksHandler)
 
 		// タスク複数完了
-		user.POST("/tasks/complete", TempController)
+		user.POST("/tasks/complete", controllers.PutMultiTasksStatusHandler)
 	}
 
 	// タスク写真確認（認証不要）
