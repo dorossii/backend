@@ -63,11 +63,13 @@ func TestGetNotices(t *testing.T) {
 		t.Fatalf("GetNotices failed: %v", err)
 	}
 
-	if len(notices) != 2 {
-		t.Fatalf("expected 2 notices for user-001, got %d: %+v", len(notices), notices)
+	// user-001 は Trash の受信者、Rescue の Helper(HelperID)、Helped の対象(TargetID)を
+	// それぞれ兼ねるため、3件すべてが該当する
+	if len(notices) != 3 {
+		t.Fatalf("expected 3 notices for user-001, got %d: %+v", len(notices), notices)
 	}
 
-	// 新しい順（HelpedNotice -> TrashNotice）で返る
+	// 新しい順（HelpedNotice -> RescueNotice -> TrashNotice）で返る
 	if notices[0].SenderType != "user-002" {
 		t.Fatalf("unexpected first notice SenderType: %s", notices[0].SenderType)
 	}
@@ -78,8 +80,15 @@ func TestGetNotices(t *testing.T) {
 	if notices[1].SenderType != "user-002" {
 		t.Fatalf("unexpected second notice SenderType: %s", notices[1].SenderType)
 	}
-	if notices[1].Title != "花子さんから汚さ3分の攻撃が届きました" {
+	if notices[1].Title != "花子さんをレスキューしました" {
 		t.Fatalf("unexpected second notice Title: %s", notices[1].Title)
+	}
+
+	if notices[2].SenderType != "user-002" {
+		t.Fatalf("unexpected third notice SenderType: %s", notices[2].SenderType)
+	}
+	if notices[2].Title != "花子さんから汚さ3分の攻撃が届きました" {
+		t.Fatalf("unexpected third notice Title: %s", notices[2].Title)
 	}
 }
 
