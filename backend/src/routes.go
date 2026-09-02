@@ -61,6 +61,11 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 	// タスク写真確認（認証不要）
 	router.GET("/user/task/:imageId/image", controllers.GetTaskImageHandler)
 
+	// ヘルスチェック（認証不要）
+	router.GET("/health", func(c echo.Context) error {
+		return c.JSON(200, map[string]string{"status": "ok"})
+	})
+
 	// friendグループ
 	friend := router.Group("/friend", middlewares.RequireAuth)
 	{
