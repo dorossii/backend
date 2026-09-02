@@ -185,3 +185,8 @@ func AdminListTasksWithBaseTask(userID string) ([]AdminTaskRow, error) {
 	err := query.Scan(&rows).Error
 	return rows, err
 }
+
+// 複数まとめてステータス更新
+func UpdateTasksStatus(tx *gorm.DB, taskIDs []string, status models.TaskStatus) error {
+	return tx.Model(&models.Task{}).Where("task_id IN ?", taskIDs).Update("status", status).Error
+}

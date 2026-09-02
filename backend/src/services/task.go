@@ -418,6 +418,7 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 	return PutTaskStatusResponse{}, nil
 }
 
+// 更新して良いか検証
 func validateTaskStatusUpdate(userID, taskID, status string) (models.Task, error) {
 	task, err := repositories.GetTask(taskID)
 	if err != nil {
@@ -489,6 +490,7 @@ var taskTransitionRules = []TransitionRule{
 	},
 }
 
+// 遷移ルール検証
 func validateTaskTransition(task models.Task, actor string, nextStatus models.TaskStatus, message string) error {
 
 	for _, rule := range taskTransitionRules {
@@ -569,6 +571,7 @@ func applyTaskCompletionEffect(tx *gorm.DB, userID string, baseTask models.BaseT
 	return *user, dirtAmount, repositories.CreateTrashNotice(tx, notice)
 }
 
+// 嫌がらせ相手
 func chooseTrashTarget(userID string, targetUserID string, rescueUserIDs []models.HelpTargets) (string, error) {
 	rescueMap := make(map[string]bool)
 
@@ -622,4 +625,179 @@ func GetTaskImage(imageID string) (filePath string, contentType string, err erro
 	}
 
 	return "", "", ErrTaskNotFound
+}
+
+type PutMultiTasksStatusRequest struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+}
+
+func PutMultiTasksStatus(userID string, req []PutMultiTasksStatusRequest) error {
+	tx := models.DB.Begin()
+	defer tx.Rollback()
+
+	var completedTasks []PutMultiTasksStatusRequest
+	var pendingTasks []PutMultiTasksStatusRequest
+	taskIDs := make(map[string]struct{})
+
+	// ステータスごとに振り分け・タスクID重複除外
+	for _, taskReq := range req {
+		if _, exists := taskIDs[taskReq.ID]; exists {
+			continue
+		}
+
+		taskIDs[taskReq.ID] = struct{}{}
+
+		switch taskReq.Status {
+		case TaskStatusComplete:
+			completedTasks = append(completedTasks, taskReq)
+
+		case TaskStatusPending:
+			pendingTasks = append(pendingTasks, taskReq)
+
+		default:
+			return ErrInvalidTaskState
+		}
+	}
+
+	// レスキュー対象ユーザーを取得
+	var rescueUserIDs []models.HelpTargets
+
+	if len(completedTasks) > 0 {
+		var err error
+		rescueUserIDs, err = repositories.GetRescueUserIDs(userID)
+		if err != nil {
+			return err
+		}
+	}
+
+	// 完了タスクの検証・完了処理
+	completedTaskIDs := make([]string, 0, len(completedTasks))
+	totalDirt := 0
+
+	for _, taskReq := range completedTasks {
+		task, err := validateTaskStatusUpdate(userID, taskReq.ID, taskReq.Status)
+		if err != nil {
+			return err
+		}
+
+		// 複数更新はタスク所有者のみ
+		if task.UserID != userID {
+			return ErrTaskPermissionDenied
+		}
+
+		// 遷移可能か検証(""これなのはメッセージが必要ないから)
+		if err := validateTaskTransition(task, "owner", models.TaskStatusCompleted, ""); err != nil {
+			return err
+		}
+
+		baseTask, err := repositories.GetBaseTask(task.BaseID)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrTaskNotFound
+			}
+			return err
+		}
+
+		// 完了時の汚さ・嫌がらせ処理
+		_, dirtAmount, err := applyTaskCompletionEffect(tx, userID, baseTask, rescueUserIDs)
+		if err != nil {
+			return err
+		}
+
+		completedTaskIDs = append(completedTaskIDs, taskReq.ID)
+		totalDirt += dirtAmount
+	}
+
+	// 完了ステータスを一括更新
+	if len(completedTaskIDs) > 0 {
+		if err := repositories.UpdateTasksStatus(tx, completedTaskIDs, models.TaskStatusCompleted); err != nil {
+			return err
+		}
+	}
+
+	// Pendingタスクの検証
+	pendingTaskIDs := make([]string, 0, len(pendingTasks))
+
+	for _, taskReq := range pendingTasks {
+		task, err := validateTaskStatusUpdate(userID, taskReq.ID, taskReq.Status)
+		if err != nil {
+			return err
+		}
+
+		// 複数更新はタスク所有者のみ
+		if task.UserID != userID {
+			return ErrTaskPermissionDenied
+		}
+
+		// 遷移可能か検証(""これなのはメッセージが必要ないから)
+		if err := validateTaskTransition(task, "owner", models.TaskStatusPending, ""); err != nil {
+			return err
+		}
+
+		pendingTaskIDs = append(pendingTaskIDs, taskReq.ID)
+	}
+
+	// Pendingステータスを一括更新
+	if len(pendingTaskIDs) > 0 {
+		if err := repositories.UpdateTasksStatus(tx, pendingTaskIDs, models.TaskStatusPending); err != nil {
+			return err
+		}
+	}
+
+	// 完了タスクがある場合の追加処理
+	if len(completedTasks) > 0 {
+		// レスキュー処理
+		var validRescueUsers []models.HelpTargets
+
+		for _, rescueUser := range rescueUserIDs {
+			if rescueUser.FriendID != "" {
+				validRescueUsers = append(validRescueUsers, rescueUser)
+			}
+		}
+
+		if totalDirt > 0 && len(validRescueUsers) > 0 {
+			reduceAmount := totalDirt / len(validRescueUsers)
+
+			for _, rescueUser := range validRescueUsers {
+				if err := repositories.UpdateDirtLevel(tx, rescueUser.FriendID, -reduceAmount); err != nil {
+					return err
+				}
+			}
+		}
+
+		// コンボ更新
+		user, err := repositories.GetUser(userID)
+		if err != nil {
+			return err
+		}
+
+		lastCompleted := user.LastTaskCompletedAt
+		now := utils.NowJST()
+
+		diffDays := -1
+
+		if lastCompleted != nil {
+			diffDays = int(now.Truncate(24*time.Hour).Sub(lastCompleted.Truncate(24*time.Hour)).Hours() / 24)
+		}
+
+		newCombo := 1
+
+		if diffDays == 0 {
+			newCombo = user.Combo
+		} else if diffDays == 1 {
+			newCombo = user.Combo + 1
+		}
+
+		if err := repositories.UpdateUserCombo(tx, userID, newCombo, now); err != nil {
+			return err
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		logger.PrintErr("commit transaction", err)
+		return err
+	}
+
+	return nil
 }

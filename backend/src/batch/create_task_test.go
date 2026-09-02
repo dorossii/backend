@@ -37,8 +37,12 @@ func TestCreateTask(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// 検証①: 生成された総タスク数の確認 (ユーザー2人 × 2タスク = 4つ)
-	expectedTotalTasks := 6
+	// 検証①: 生成された総タスク数の確認 (ユーザー数 × 2タスク)
+	var users []models.User
+	if err := models.DB.Find(&users).Error; err != nil {
+		t.Fatal(err)
+	}
+	expectedTotalTasks := len(users) * 2
 	if len(createdTasks) != expectedTotalTasks {
 		t.Fatalf("unexpected total tasks: got %d, want %d", len(createdTasks), expectedTotalTasks)
 	}
@@ -47,12 +51,6 @@ func TestCreateTask(t *testing.T) {
 	tasksByUser := make(map[string][]models.Task)
 	for _, task := range createdTasks {
 		tasksByUser[task.UserID] = append(tasksByUser[task.UserID], task)
-	}
-
-	// 結果の検証 (SELECT)
-	var users []models.User
-	if err := models.DB.Find(&users).Error; err != nil {
-		t.Fatal(err)
 	}
 
 	for _, user := range users {
