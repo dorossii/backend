@@ -632,13 +632,20 @@ type PutMultiTasksStatusRequest struct {
 	Status string `json:"status"`
 }
 
-func PutMultiTasksStatus(userID string, req []PutMultiTasksStatusRequest) error {
+type PutMultiTasksResponse struct {
+	ID           string
+	IsChanged    bool
+	RequireImage bool
+}
+
+func PutMultiTasksStatus(userID string, req []PutMultiTasksStatusRequest) ([]PutMultiTasksResponse, error) {
 	tx := models.DB.Begin()
 	defer tx.Rollback()
 
 	var completedTasks []PutMultiTasksStatusRequest
 	var pendingTasks []PutMultiTasksStatusRequest
 	taskIDs := make(map[string]struct{})
+	responses := make(map[string]PutMultiTasksResponse)
 
 	// ステータスごとに振り分け・タスクID重複除外
 	for _, taskReq := range req {
@@ -656,7 +663,7 @@ func PutMultiTasksStatus(userID string, req []PutMultiTasksStatusRequest) error 
 			pendingTasks = append(pendingTasks, taskReq)
 
 		default:
-			return ErrInvalidTaskState
+			return []PutMultiTasksResponse{}, ErrInvalidTaskState
 		}
 	}
 
@@ -667,7 +674,7 @@ func PutMultiTasksStatus(userID string, req []PutMultiTasksStatusRequest) error 
 		var err error
 		rescueUserIDs, err = repositories.GetRescueUserIDs(userID)
 		if err != nil {
-			return err
+			return []PutMultiTasksResponse{}, err
 		}
 	}
 
@@ -678,41 +685,50 @@ func PutMultiTasksStatus(userID string, req []PutMultiTasksStatusRequest) error 
 	for _, taskReq := range completedTasks {
 		task, err := validateTaskStatusUpdate(userID, taskReq.ID, taskReq.Status)
 		if err != nil {
-			return err
+			return []PutMultiTasksResponse{}, err
 		}
 
 		// 複数更新はタスク所有者のみ
 		if task.UserID != userID {
-			return ErrTaskPermissionDenied
+			return []PutMultiTasksResponse{}, ErrTaskPermissionDenied
 		}
 
-		// 遷移可能か検証(""これなのはメッセージが必要ないから)
+		// 遷移可能か検証
 		if err := validateTaskTransition(task, "owner", models.TaskStatusCompleted, ""); err != nil {
-			return err
+			return []PutMultiTasksResponse{}, err
 		}
 
 		baseTask, err := repositories.GetBaseTask(task.BaseID)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return ErrTaskNotFound
+				return []PutMultiTasksResponse{}, ErrTaskNotFound
 			}
-			return err
+			return []PutMultiTasksResponse{}, err
 		}
 
 		// 完了時の汚さ・嫌がらせ処理
 		_, dirtAmount, err := applyTaskCompletionEffect(tx, userID, baseTask, rescueUserIDs)
 		if err != nil {
-			return err
+			return []PutMultiTasksResponse{}, err
 		}
 
 		completedTaskIDs = append(completedTaskIDs, taskReq.ID)
 		totalDirt += dirtAmount
+
+		isChanged := true
+		requireImage := false
+
+		responses[taskReq.ID] = PutMultiTasksResponse{
+			ID:           taskReq.ID,
+			IsChanged:    isChanged,
+			RequireImage: requireImage,
+		}
 	}
 
 	// 完了ステータスを一括更新
 	if len(completedTaskIDs) > 0 {
 		if err := repositories.UpdateTasksStatus(tx, completedTaskIDs, models.TaskStatusCompleted); err != nil {
-			return err
+			return []PutMultiTasksResponse{}, err
 		}
 	}
 
@@ -722,32 +738,46 @@ func PutMultiTasksStatus(userID string, req []PutMultiTasksStatusRequest) error 
 	for _, taskReq := range pendingTasks {
 		task, err := validateTaskStatusUpdate(userID, taskReq.ID, taskReq.Status)
 		if err != nil {
-			return err
+			return []PutMultiTasksResponse{}, err
 		}
 
 		// 複数更新はタスク所有者のみ
 		if task.UserID != userID {
-			return ErrTaskPermissionDenied
+			return []PutMultiTasksResponse{}, ErrTaskPermissionDenied
 		}
 
-		// 遷移可能か検証(""これなのはメッセージが必要ないから)
+		// 遷移可能か検証
 		if err := validateTaskTransition(task, "owner", models.TaskStatusPending, ""); err != nil {
-			return err
+			return []PutMultiTasksResponse{}, err
+		}
+
+		// 認証待ち処理
+		if task.RequireImage && task.ImageID == "" {
+			return []PutMultiTasksResponse{}, ErrInvalidRequest
 		}
 
 		pendingTaskIDs = append(pendingTaskIDs, taskReq.ID)
+
+		isChanged := true
+		requireImage := task.RequireImage
+
+		responses[taskReq.ID] = PutMultiTasksResponse{
+			ID:           taskReq.ID,
+			IsChanged:    isChanged,
+			RequireImage: requireImage,
+		}
 	}
 
 	// Pendingステータスを一括更新
 	if len(pendingTaskIDs) > 0 {
 		if err := repositories.UpdateTasksStatus(tx, pendingTaskIDs, models.TaskStatusPending); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	// 完了タスクがある場合の追加処理
 	if len(completedTasks) > 0 {
-		// レスキュー処理
+
 		var validRescueUsers []models.HelpTargets
 
 		for _, rescueUser := range rescueUserIDs {
@@ -761,7 +791,7 @@ func PutMultiTasksStatus(userID string, req []PutMultiTasksStatusRequest) error 
 
 			for _, rescueUser := range validRescueUsers {
 				if err := repositories.UpdateDirtLevel(tx, rescueUser.FriendID, -reduceAmount); err != nil {
-					return err
+					return []PutMultiTasksResponse{}, err
 				}
 			}
 		}
@@ -769,20 +799,18 @@ func PutMultiTasksStatus(userID string, req []PutMultiTasksStatusRequest) error 
 		// コンボ更新
 		user, err := repositories.GetUser(userID)
 		if err != nil {
-			return err
+			return []PutMultiTasksResponse{}, err
 		}
 
 		lastCompleted := user.LastTaskCompletedAt
 		now := utils.NowJST()
 
 		diffDays := -1
-
 		if lastCompleted != nil {
-			diffDays = int(now.Truncate(24*time.Hour).Sub(lastCompleted.Truncate(24*time.Hour)).Hours() / 24)
+			diffDays = int(now.Truncate(24 * time.Hour).Sub(lastCompleted.Truncate(24 * time.Hour)).Hours() / 24)
 		}
 
 		newCombo := 1
-
 		if diffDays == 0 {
 			newCombo = user.Combo
 		} else if diffDays == 1 {
@@ -790,14 +818,24 @@ func PutMultiTasksStatus(userID string, req []PutMultiTasksStatusRequest) error 
 		}
 
 		if err := repositories.UpdateUserCombo(tx, userID, newCombo, now); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	if err := tx.Commit().Error; err != nil {
 		logger.PrintErr("commit transaction", err)
-		return err
+		return []PutMultiTasksResponse{}, err
 	}
 
-	return nil
+	// リクエストと同じ順番でレスポンスを返す
+	result := make([]PutMultiTasksResponse, 0, len(taskIDs))
+
+	for _, taskReq := range req {
+		if response, exists := responses[taskReq.ID]; exists {
+			result = append(result, response)
+			delete(responses, taskReq.ID)
+		}
+	}
+
+	return result, nil
 }
