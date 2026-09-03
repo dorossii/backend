@@ -665,9 +665,11 @@ type PutMultiTasksStatusRequest struct {
 }
 
 type PutMultiTasksResponse struct {
-	ID           string
-	IsChanged    bool
-	RequireImage bool
+	ID              string `json:"id"`
+	IsChanged       bool   `json:"isChanged"`
+	RequireImage    bool   `json:"requireImage"`
+	MessageUserId   string `json:"messageUserId"`
+	MessageUserName string `json:"messageUserName"`
 }
 
 func PutMultiTasksStatus(userID string, req []PutMultiTasksStatusRequest) ([]PutMultiTasksResponse, error) {
@@ -833,7 +835,7 @@ func PutMultiTasksStatus(userID string, req []PutMultiTasksStatusRequest) ([]Put
 
 		diffDays := -1
 		if lastCompleted != nil {
-			diffDays = int(now.Truncate(24 * time.Hour).Sub(lastCompleted.Truncate(24 * time.Hour)).Hours() / 24)
+			diffDays = int(now.Truncate(24*time.Hour).Sub(lastCompleted.Truncate(24*time.Hour)).Hours() / 24)
 		}
 
 		newCombo := 1
