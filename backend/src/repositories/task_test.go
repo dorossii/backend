@@ -65,6 +65,60 @@ func TestGetUserTasks_TagMapping(t *testing.T) {
 	}
 }
 
+// GetUserTasksのImageIdが、base_tasksのマスタ画像ではなく、
+// tasksに保存されたユーザーのアップロード画像(完了証明写真)のIDを返すことを確認する。
+func TestGetUserTasks_ImageIdIsTaskUploadedImage(t *testing.T) {
+	user := models.User{
+		UserID:     "repo-test-user-002",
+		UserName:   "repo-test-user-2",
+		BirthDate:  time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
+		Mailadress: "repo-test-user-2@example.com",
+	}
+	if err := models.DB.Create(&user).Error; err != nil {
+		t.Fatalf("failed to create dummy user: %v", err)
+	}
+
+	baseTask := models.BaseTask{
+		BaseID:          "repo-test-base-image",
+		TaskName:        "食材の買い出し",
+		Description:     "スーパーで翌日以降に必要な食材リストを確認しながら購入する。",
+		DifficultyLevel: 3,
+		DueTime:         2,
+		ImageId:         "kaimono.webp", // base_tasksのマスタ画像(ファイル名)
+		Tags:            models.TaskTagAther,
+	}
+	if err := models.DB.Create(&baseTask).Error; err != nil {
+		t.Fatalf("failed to create dummy base task: %v", err)
+	}
+
+	task := models.Task{
+		TaskID:    "repo-test-task-image",
+		BaseID:    baseTask.BaseID,
+		UserID:    user.UserID,
+		Status:    models.TaskStatusPending,
+		StartTime: time.Now(),
+		EndTime:   time.Now().Add(24 * time.Hour),
+		ImageID:   "uploaded-image-uuid", // ユーザーがアップロードした完了証明写真のID
+	}
+	if err := models.DB.Create(&task).Error; err != nil {
+		t.Fatalf("failed to create dummy task: %v", err)
+	}
+
+	results, err := repositories.GetUserTasks(user.UserID)
+	if err != nil {
+		t.Fatalf("GetUserTasks failed: %v", err)
+	}
+
+	if len(results) != 1 {
+		t.Fatalf("expected 1 task, got %d", len(results))
+	}
+
+	got := results[0]
+	if got.ImageID != task.ImageID {
+		t.Fatalf("expected ImageID %s (task's uploaded image), got %s", task.ImageID, got.ImageID)
+	}
+}
+
 func TestGetMessageUserId(t *testing.T) {
 	// テスト用ユーザーを作成
 	user := models.User{
