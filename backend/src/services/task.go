@@ -747,13 +747,10 @@ func PutMultiTasksStatus(userID string, req []PutMultiTasksStatusRequest) ([]Put
 		completedTaskIDs = append(completedTaskIDs, taskReq.ID)
 		totalDirt += dirtAmount
 
-		isChanged := true
-		requireImage := false
-
 		responses[taskReq.ID] = PutMultiTasksResponse{
 			ID:           taskReq.ID,
-			IsChanged:    isChanged,
-			RequireImage: requireImage,
+			IsChanged:    true,
+			RequireImage: baseTask.ImageFlag,
 		}
 	}
 
@@ -790,13 +787,10 @@ func PutMultiTasksStatus(userID string, req []PutMultiTasksStatusRequest) ([]Put
 
 		pendingTaskIDs = append(pendingTaskIDs, taskReq.ID)
 
-		isChanged := true
-		requireImage := task.RequireImage
-
 		responses[taskReq.ID] = PutMultiTasksResponse{
 			ID:           taskReq.ID,
-			IsChanged:    isChanged,
-			RequireImage: requireImage,
+			IsChanged:    true,
+			RequireImage: task.RequireImage,
 		}
 	}
 
