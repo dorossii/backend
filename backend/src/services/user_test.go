@@ -2,6 +2,7 @@ package services_test
 
 import (
 	"backend/models"
+	"backend/repositories"
 	"backend/services"
 	"errors"
 	"log"
@@ -212,6 +213,57 @@ func TestGetUserStatus_NotFound(t *testing.T) {
 	_, err := services.GetUserStatus("not-exist-user")
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		t.Fatalf("expected gorm.ErrRecordNotFound, got: %v", err)
+	}
+}
+
+// TestGetUserStatus_DirtStage はDirtLevel/HealthPoint/ComboからDirtStage(0〜8)が
+// 期待通りに算出されることを確認する。
+func TestGetUserStatus_DirtStage(t *testing.T) {
+	truncateUsersAndRooms(t)
+
+	cases := []struct {
+		name        string
+		dirtLevel   int
+		healthPoint int
+		combo       int
+		wantStage   int
+	}{
+		{"最小値は1段階", 0, 500, 0, 1},
+		{"100は1段階(切り上げ境界)", 100, 500, 0, 1},
+		{"101は2段階(切り上げ境界)", 101, 500, 0, 2},
+		{"700は7段階(上限)", 700, 500, 0, 7},
+		{"神様条件(combo>=7 かつ dirtLevel<=72)なら0段階", 72, 500, 7, 0},
+		{"combo>=7でもdirtLevelが73以上なら神様にならない", 73, 500, 7, 1},
+		{"combo<7ならdirtLevelが72以下でも神様にならない", 50, 500, 6, 1},
+		{"HP=0はRIP(8段階)、神様条件より優先", 50, 0, 10, 8},
+	}
+
+	for i, c := range cases {
+		userID := "dirt-stage-user-" + string(rune('a'+i))
+
+		req := services.RegisterUserRequest{
+			BirthDate:  946684800,
+			LivingType: "alone",
+		}
+		if _, err := services.RegisterUser(userID, "test-user", userID+"@example.com", req); err != nil {
+			t.Fatalf("[%s] RegisterUser failed: %v", c.name, err)
+		}
+
+		if err := repositories.UpdateUserStats(userID, &c.healthPoint, &c.dirtLevel); err != nil {
+			t.Fatalf("[%s] UpdateUserStats failed: %v", c.name, err)
+		}
+		if err := models.DB.Model(&models.User{}).Where("user_id = ?", userID).Update("combo", c.combo).Error; err != nil {
+			t.Fatalf("[%s] failed to set combo: %v", c.name, err)
+		}
+
+		res, err := services.GetUserStatus(userID)
+		if err != nil {
+			t.Fatalf("[%s] GetUserStatus failed: %v", c.name, err)
+		}
+
+		if res.DirtLevel != c.wantStage {
+			t.Errorf("[%s] unexpected DirtStage: got %d, want %d", c.name, res.DirtLevel, c.wantStage)
+		}
 	}
 }
 

@@ -119,6 +119,45 @@ type UserStatusResponse struct {
 	LivingType  string `json:"livingType,omitempty"`
 }
 
+const (
+	// GodComboThreshold は神様判定に必要な連続タスク達成数
+	GodComboThreshold = 7
+	// GodDirtLevelMax は神様判定に必要な汚さレベルの上限
+	GodDirtLevelMax = 72
+	// DirtLevelMax はDirtLevelの取りうる最大値
+	DirtLevelMax = 700
+	// DirtStageMax は通常時(神様・RIPを除く)のDirtStageの最大値
+	DirtStageMax = 7
+	// DirtStageGod は神様のDirtStage
+	DirtStageGod = 0
+	// DirtStageRIP はRIPのDirtStage
+	DirtStageRIP = 8
+)
+
+// calcDirtStage はHealthPoint/Combo/DirtLevelから0(神様)〜8(RIP)のDirtStageを算出する
+func calcDirtStage(dirtLevel, healthPoint, combo int) int {
+	// HP=0 は他条件より優先してRIP扱いとする
+	if healthPoint <= 0 {
+		return DirtStageRIP
+	}
+
+	// 7日以上連続でタスクを達成し、汚さが72以下なら神様扱い
+	if combo >= GodComboThreshold && dirtLevel <= GodDirtLevelMax {
+		return DirtStageGod
+	}
+
+	// それ以外は DirtLevel を7段階(1〜7)に切り上げ分割する
+	stage := (dirtLevel + DirtLevelMax/DirtStageMax - 1) / (DirtLevelMax / DirtStageMax)
+	if stage < 1 {
+		stage = 1
+	}
+	if stage > DirtStageMax {
+		stage = DirtStageMax
+	}
+
+	return stage
+}
+
 // GetUserStatus はホーム画面向けのユーザーステータスを取得する
 func GetUserStatus(userID string) (*UserStatusResponse, error) {
 	user, err := repositories.GetUser(userID)
@@ -131,7 +170,7 @@ func GetUserStatus(userID string) (*UserStatusResponse, error) {
 		UserName:    user.UserName,
 		UserIcon:    user.Icon,
 		BgColors:    user.BgColor,
-		DirtLevel:   user.DirtLevel,
+		DirtLevel:   calcDirtStage(user.DirtLevel, user.HealthPoint, user.Combo),
 		HealthPoint: user.HealthPoint,
 		BirthDate:   user.BirthDate.Unix(),
 	}
