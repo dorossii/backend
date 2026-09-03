@@ -64,3 +64,98 @@ func TestGetUserTasks_TagMapping(t *testing.T) {
 		t.Fatalf("unexpected Tag: got %d, want %d", got.Tag, int(models.TaskTagAther))
 	}
 }
+
+func TestGetMessageUserId(t *testing.T) {
+	// テスト用ユーザーを作成
+	user := models.User{
+		UserID:     "test-user-001",
+		UserName:   "Test User",
+		BirthDate:  time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
+		Mailadress: "test-user-001@example.com",
+	}
+	if err := repositories.CreateUser(&user); err != nil {
+		t.Fatalf("CreateUser failed: %v", err)
+	}
+
+	// テスト用フレンドを2人作成
+	friend1 := models.User{
+		UserID:     "test-friend-001",
+		UserName:   "Test Friend 1",
+		BirthDate:  time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
+		Mailadress: "test-friend-001@example.com",
+	}
+	friend2 := models.User{
+		UserID:     "test-friend-002",
+		UserName:   "Test Friend 2",
+		BirthDate:  time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
+		Mailadress: "test-friend-002@example.com",
+	}
+	if err := repositories.CreateUser(&friend1); err != nil {
+		t.Fatalf("CreateUser failed: %v", err)
+	}
+	if err := repositories.CreateUser(&friend2); err != nil {
+		t.Fatalf("CreateUser failed: %v", err)
+	}
+
+	// user -> friend1 (userが申請した方向), friend2 -> user (friend2が申請した方向) の
+	// 双方向の友達関係を作成し、方向に依らず候補として拾えることを確認する
+	if err := repositories.CreateFriendShip(&models.FriendShips{
+		UserID:   user.UserID,
+		FriendID: friend1.UserID,
+		Status:   models.FriendStatusAccepted,
+	}); err != nil {
+		t.Fatalf("CreateFriendShip failed: %v", err)
+	}
+	if err := repositories.CreateFriendShip(&models.FriendShips{
+		UserID:   friend2.UserID,
+		FriendID: user.UserID,
+		Status:   models.FriendStatusAccepted,
+	}); err != nil {
+		t.Fatalf("CreateFriendShip failed: %v", err)
+	}
+
+	// friend1 にはすでにリマインド通知済みなので候補から除外される
+	message := models.RemindNotice{
+		NoticeID:   "test-notice-001",
+		UserID:     friend1.UserID,
+		SenderID:   user.UserID,
+		Title:      "Test Notice",
+		NotifiedAt: time.Now(),
+		IsRead:     false,
+	}
+	if err := models.DB.Create(&message).Error; err != nil {
+		t.Fatalf("failed to create test message: %v", err)
+	}
+
+	// メッセージ対象を取得
+	result, err := repositories.GetMessageUserId(user.UserID)
+	if err != nil {
+		t.Fatalf("GetMessageUserId failed: %v", err)
+	}
+
+	// friend1 は通知済みなので除外され、friend2 が唯一の候補として返るはず
+	if result != friend2.UserID {
+		t.Errorf("expected %s, got %s", friend2.UserID, result)
+	}
+}
+
+func TestGetMessageUserId_NoEligibleFriend(t *testing.T) {
+	// フレンドが1人もいないユーザーで呼び出した場合、エラーではなく空文字列が返ることを確認する
+	user := models.User{
+		UserID:     "test-user-002",
+		UserName:   "Test User No Friends",
+		BirthDate:  time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
+		Mailadress: "test-user-002@example.com",
+	}
+	if err := repositories.CreateUser(&user); err != nil {
+		t.Fatalf("CreateUser failed: %v", err)
+	}
+
+	result, err := repositories.GetMessageUserId(user.UserID)
+	if err != nil {
+		t.Fatalf("GetMessageUserId failed: %v", err)
+	}
+	if result != "" {
+		t.Errorf("expected empty result, got %s", result)
+	}
+}

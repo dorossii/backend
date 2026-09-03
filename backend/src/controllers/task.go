@@ -198,6 +198,8 @@ func PutTaskStatusHandler(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, echo.Map{
 		"isChanged":    result.IsChanged,
 		"requireImage": result.RequireImage,
+		"messageUserId": result.MessageUserId,
+		"messageUserName": result.MessageUserName,
 	})
 }
 
