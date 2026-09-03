@@ -101,10 +101,10 @@ func InitRouter(router *echo.Echo) *echo.Echo {
 	}
 
 	// noticeグループ
-	notice := router.Group("/notice")
+	notice := router.Group("/notice", middlewares.RequireAuth)
 	{
 		// 通知取得
-		notice.GET("/", TempController)
+		notice.GET("/", controllers.GetNotices)
 	}
 
 	// 管理画面ログイン・ログアウト(認証不要、ブルートフォース対策で緩いレート制限)
