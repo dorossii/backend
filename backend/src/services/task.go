@@ -777,11 +777,6 @@ func PutMultiTasksStatus(userID string, req []PutMultiTasksStatusRequest) ([]Put
 			return []PutMultiTasksResponse{}, ErrTaskPermissionDenied
 		}
 
-		// 遷移可能か検証
-		if err := validateTaskTransition(task, "owner", models.TaskStatusPending, ""); err != nil {
-			return []PutMultiTasksResponse{}, err
-		}
-
 		// 認証待ち処理
 		if task.RequireImage && task.ImageID == "" {
 			return []PutMultiTasksResponse{}, ErrInvalidRequest
@@ -855,11 +850,35 @@ func PutMultiTasksStatus(userID string, req []PutMultiTasksStatusRequest) ([]Put
 		return []PutMultiTasksResponse{}, err
 	}
 
+	// 一度でも更新があった
+	hasChanged := false
+	for _, resp := range responses {
+		if resp.IsChanged {
+			hasChanged = true
+			break
+		}
+	}
+
+	// 煽りメッセージの取得
+	var messageUserID, messageUserName string
+	var err error
+	if hasChanged {
+		messageUserID, messageUserName, err = GetMessageUserId(userID)
+		if err != nil {
+			logger.PrintErr("get message user for task completion", err)
+		}
+	}
+
 	// リクエストと同じ順番でレスポンスを返す
 	result := make([]PutMultiTasksResponse, 0, len(taskIDs))
 
 	for _, taskReq := range req {
 		if response, exists := responses[taskReq.ID]; exists {
+			if response.IsChanged {
+				response.MessageUserId = messageUserID
+				response.MessageUserName = messageUserName
+			}
+
 			result = append(result, response)
 			delete(responses, taskReq.ID)
 		}
