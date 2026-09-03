@@ -215,16 +215,14 @@ func PutMultiTasksStatusHandler(ctx echo.Context) error {
 		})
 	}
 
-	err := services.PutMultiTasksStatus(userID, req)
+	result, err := services.PutMultiTasksStatus(userID, req)
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{
 			"error": "internal server error",
 		})
 	}
 
-	return ctx.JSON(http.StatusOK, echo.Map{
-		"message": "tasks status updated successfully",
-	})
+	return ctx.JSON(http.StatusOK, result)
 }
 
 // タスク写真取得

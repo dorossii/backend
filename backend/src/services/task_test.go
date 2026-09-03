@@ -1479,7 +1479,7 @@ func TestPutMultiTasksStatus_Complete(t *testing.T) {
 		},
 	}
 
-	err := services.PutMultiTasksStatus("user-001", req)
+	_, err := services.PutMultiTasksStatus("user-001", req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1516,7 +1516,7 @@ func TestPutMultiTasksStatus_Error(t *testing.T) {
 			},
 		}
 
-		err := services.PutMultiTasksStatus("user-001", req)
+		_, err := services.PutMultiTasksStatus("user-001", req)
 		if !errors.Is(err, services.ErrTaskNotFound) {
 			t.Fatalf("expected ErrTaskNotFound, got %v", err)
 		}
@@ -1547,7 +1547,7 @@ func TestPutMultiTasksStatus_Error(t *testing.T) {
 			},
 		}
 
-		err := services.PutMultiTasksStatus("user-001", req)
+		_, err := services.PutMultiTasksStatus("user-001", req)
 		if !errors.Is(err, services.ErrTaskPermissionDenied) {
 			t.Fatalf("expected ErrTaskPermissionDenied, got %v", err)
 		}
@@ -1578,7 +1578,7 @@ func TestPutMultiTasksStatus_Error(t *testing.T) {
 			},
 		}
 
-		err := services.PutMultiTasksStatus("user-001", req)
+		_, err := services.PutMultiTasksStatus("user-001", req)
 		if !errors.Is(err, services.ErrTaskExpired) {
 			t.Fatalf("expected ErrTaskExpired, got %v", err)
 		}
