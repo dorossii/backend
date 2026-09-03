@@ -258,4 +258,3 @@ func UpdateUserStats(userID string, healthPoint *int, dirtLevel *int) error {
 
 	return models.DB.Model(&models.User{}).Where("user_id = ?", userID).Updates(updates).Error
 }
-
