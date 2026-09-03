@@ -97,7 +97,24 @@ func TestGetMessageUserId(t *testing.T) {
 		t.Fatalf("CreateUser failed: %v", err)
 	}
 
-	// テスト用メッセージを作成
+	// user -> friend1 (userが申請した方向), friend2 -> user (friend2が申請した方向) の
+	// 双方向の友達関係を作成し、方向に依らず候補として拾えることを確認する
+	if err := repositories.CreateFriendShip(&models.FriendShips{
+		UserID:   user.UserID,
+		FriendID: friend1.UserID,
+		Status:   models.FriendStatusAccepted,
+	}); err != nil {
+		t.Fatalf("CreateFriendShip failed: %v", err)
+	}
+	if err := repositories.CreateFriendShip(&models.FriendShips{
+		UserID:   friend2.UserID,
+		FriendID: user.UserID,
+		Status:   models.FriendStatusAccepted,
+	}); err != nil {
+		t.Fatalf("CreateFriendShip failed: %v", err)
+	}
+
+	// friend1 にはすでにリマインド通知済みなので候補から除外される
 	message := models.RemindNotice{
 		NoticeID:   "test-notice-001",
 		UserID:     friend1.UserID,
@@ -110,14 +127,35 @@ func TestGetMessageUserId(t *testing.T) {
 		t.Fatalf("failed to create test message: %v", err)
 	}
 
-	// メッセージを取得
+	// メッセージ対象を取得
 	result, err := repositories.GetMessageUserId(user.UserID)
 	if err != nil {
 		t.Fatalf("GetMessageUserId failed: %v", err)
 	}
 
-	// テスト用ユーザーのIDと一致するか確認
-	if result == friend2.UserID {
+	// friend1 は通知済みなので除外され、friend2 が唯一の候補として返るはず
+	if result != friend2.UserID {
 		t.Errorf("expected %s, got %s", friend2.UserID, result)
+	}
+}
+
+func TestGetMessageUserId_NoEligibleFriend(t *testing.T) {
+	// フレンドが1人もいないユーザーで呼び出した場合、エラーではなく空文字列が返ることを確認する
+	user := models.User{
+		UserID:     "test-user-002",
+		UserName:   "Test User No Friends",
+		BirthDate:  time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
+		Mailadress: "test-user-002@example.com",
+	}
+	if err := repositories.CreateUser(&user); err != nil {
+		t.Fatalf("CreateUser failed: %v", err)
+	}
+
+	result, err := repositories.GetMessageUserId(user.UserID)
+	if err != nil {
+		t.Fatalf("GetMessageUserId failed: %v", err)
+	}
+	if result != "" {
+		t.Errorf("expected empty result, got %s", result)
 	}
 }

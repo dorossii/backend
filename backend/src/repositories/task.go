@@ -187,24 +187,26 @@ func AdminListTasksWithBaseTask(userID string) ([]AdminTaskRow, error) {
 }
 
 // フレンド且つRemindNoticeに保存されていないユーザーをランダムで一件取得する
+// 対象が存在しない場合は空文字列, nil を返す（エラーではない）
 func GetMessageUserId(userID string) (string, error) {
 	var friendID string
 
 	err := models.DB.
-		Model(&models.FriendShips{}).
-		Where("user_id = ?", userID).
-		Where("status = ?", models.FriendStatusAccepted). // 実際の「友達」ステータスに合わせる
-		Where(`
-			NOT EXISTS (
+		Raw(`
+			SELECT CASE WHEN friend_ships.user_id = ? THEN friend_ships.friend_id ELSE friend_ships.user_id END AS friend_id
+			FROM friend_ships
+			WHERE (friend_ships.user_id = ? OR friend_ships.friend_id = ?)
+			AND friend_ships.status = ?
+			AND NOT EXISTS (
 				SELECT 1
 				FROM remind_notices
-				WHERE remind_notices.user_id = friend_ships.friend_id
+				WHERE remind_notices.user_id = CASE WHEN friend_ships.user_id = ? THEN friend_ships.friend_id ELSE friend_ships.user_id END
 				AND remind_notices.sender_id = ?
 			)
-		`, userID).
-		Order("RAND()").
-		Limit(1).
-		Pluck("friend_id", &friendID).Error
+			ORDER BY RAND()
+			LIMIT 1
+		`, userID, userID, userID, models.FriendStatusAccepted, userID, userID).
+		Scan(&friendID).Error
 
 	return friendID, err
 }
