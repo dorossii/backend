@@ -210,3 +210,8 @@ func GetMessageUserId(userID string) (string, error) {
 
 	return friendID, err
 }
+
+// 複数まとめてステータス更新
+func UpdateTasksStatus(tx *gorm.DB, taskIDs []string, status models.TaskStatus) error {
+	return tx.Model(&models.Task{}).Where("task_id IN ?", taskIDs).Update("status", status).Error
+}

@@ -137,6 +137,13 @@ func GetUser(UserID string) (*models.User, error) {
 	return &user, err
 }
 
+// GetUserRoom は UserRoom を取得する
+func GetUserRoom(userID string) (*models.UserRoom, error) {
+	var room models.UserRoom
+	err := models.DB.First(&room, "user_id = ?", userID).Error
+	return &room, err
+}
+
 // UpdateUserSetting は指定したユーザーの表示名・アイコン・背景を更新する
 // icon/bgColor が nil の場合はそのカラムを更新しない
 func UpdateUserSetting(userID string, userName string, icon *string, bgColor *string) error {

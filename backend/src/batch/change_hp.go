@@ -27,18 +27,20 @@ func ChangeHP() error {
 	if err := models.DB.Model(&models.User{}).Where("dirt_level <= ?", 72).Update("health_point", gorm.Expr("health_point + ?", 60)).Error; err != nil {
 		return err
 	}
-	//HPの上限は1000なので、HPが1000を超えたユーザーはHPを1000に固定する
+
+
+	//汚さが73以上のユーザーのHPは(汚さ ÷  285) × 10　HPを減らす
+	if err := models.DB.Model(&models.User{}).Where("dirt_level >= ?", 73).Update("health_point", gorm.Expr("health_point - ((dirt_level / 285) * 10)")).Error; err != nil {
+		return err
+	}
+
+		//HPの上限は1000なので、HPが1000を超えたユーザーはHPを1000に固定する
 	if err := models.DB.Model(&models.User{}).Where("health_point > ?", 1000).Update("health_point", 1000).Error; err != nil {
 		return err
 	}
 
 	//HPが0未満のユーザーのHPは0に固定する
 	if err := models.DB.Model(&models.User{}).Where("health_point < ?", 0).Update("health_point", 0).Error; err != nil {
-		return err
-	}
-
-	//汚さが73以上のユーザーのHPは(汚さ ÷  285) × 10　HPを減らす
-	if err := models.DB.Model(&models.User{}).Where("dirt_level >= ?", 73).Update("health_point", gorm.Expr("health_point - ((dirt_level / 285) * 10)")).Error; err != nil {
 		return err
 	}
 

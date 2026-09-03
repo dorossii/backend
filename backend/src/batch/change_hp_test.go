@@ -32,6 +32,10 @@ func TestChangeHP(t *testing.T) {
 		if user.UserID == "user-003" {
 			expectedHP = 55 // 8% -> 5.5% (80 - 25)
 		}
+		if user.UserID == "user-004" {
+			expectedHP = 0 // 0% -> 0% (0 - 0)
+		}
+
 		if user.HealthPoint != expectedHP {
 			t.Errorf("User %s: expected HealthPoint %d, got %d", user.UserID, expectedHP, user.HealthPoint)
 		}
