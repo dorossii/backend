@@ -33,9 +33,9 @@ func GetUserTasks(userID string) ([]TaskResponse, error) {
             base_tasks.tags AS tag,
             base_tasks.difficulty_level,
             base_tasks.description, 
-            CAST(UNIX_TIMESTAMP(tasks.start_time) AS SIGNED) as start_date, 
-            CAST(UNIX_TIMESTAMP(tasks.end_time) AS SIGNED) as end_time, 
-            base_tasks.image_id,
+            CAST(UNIX_TIMESTAMP(tasks.start_time) AS SIGNED) as start_date,
+            CAST(UNIX_TIMESTAMP(tasks.end_time) AS SIGNED) as end_time,
+            tasks.image_id,
             tasks.message
         `).
 		Joins("JOIN base_tasks ON tasks.base_id = base_tasks.base_id").
@@ -184,6 +184,31 @@ func AdminListTasksWithBaseTask(userID string) ([]AdminTaskRow, error) {
 
 	err := query.Scan(&rows).Error
 	return rows, err
+}
+
+// フレンド且つRemindNoticeに保存されていないユーザーをランダムで一件取得する
+// 対象が存在しない場合は空文字列, nil を返す（エラーではない）
+func GetMessageUserId(userID string) (string, error) {
+	var friendID string
+
+	err := models.DB.
+		Raw(`
+			SELECT CASE WHEN friend_ships.user_id = ? THEN friend_ships.friend_id ELSE friend_ships.user_id END AS friend_id
+			FROM friend_ships
+			WHERE (friend_ships.user_id = ? OR friend_ships.friend_id = ?)
+			AND friend_ships.status = ?
+			AND NOT EXISTS (
+				SELECT 1
+				FROM remind_notices
+				WHERE remind_notices.user_id = CASE WHEN friend_ships.user_id = ? THEN friend_ships.friend_id ELSE friend_ships.user_id END
+				AND remind_notices.sender_id = ?
+			)
+			ORDER BY RAND()
+			LIMIT 1
+		`, userID, userID, userID, models.FriendStatusAccepted, userID, userID).
+		Scan(&friendID).Error
+
+	return friendID, err
 }
 
 // 複数まとめてステータス更新

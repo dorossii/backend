@@ -219,8 +219,10 @@ func PostUploadImage(userID string, taskID string, fileHeader *multipart.FileHea
 }
 
 type PutTaskStatusResponse struct {
-	IsChanged    bool
-	RequireImage bool
+	IsChanged       bool
+	RequireImage    bool
+	MessageUserId   string
+	MessageUserName string
 }
 
 const (
@@ -246,6 +248,28 @@ func ParseTaskStatus(s string) (models.TaskStatus, error) {
 	default:
 		return 0, ErrInvalidTaskStatus
 	}
+}
+
+// 煽りメッセージ送信対象の友達IDと名前を取得する
+// 対象がいない場合は空文字列, nil を返す（エラーではない）
+func GetMessageUserId(userID string) (string, string, error) {
+	friendID, err := repositories.GetMessageUserId(userID)
+	if err != nil {
+		return "", "", err
+	}
+	if friendID == "" {
+		return "", "", nil
+	}
+
+	friend, err := repositories.GetUser(friendID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", "", nil
+		}
+		return "", "", err
+	}
+
+	return friendID, friend.UserName, nil
 }
 
 // 　タスクステータス更新(完了•未完了)
@@ -362,9 +386,17 @@ func PutTaskStatus(userID, taskID, status, message string) (PutTaskStatusRespons
 			return PutTaskStatusResponse{}, err
 		}
 
+		// 煽りメッセージ対象の取得はタスク完了処理の成否に影響させない（best-effort）
+		messageUserID, messageUserName, err := GetMessageUserId(userID)
+		if err != nil {
+			logger.PrintErr("get message user for task completion", err)
+		}
+
 		return PutTaskStatusResponse{
-			IsChanged:    true,
-			RequireImage: false,
+			IsChanged:       true,
+			RequireImage:    false,
+			MessageUserId:   messageUserID,
+			MessageUserName: messageUserName,
 		}, nil
 
 	case models.TaskStatusPending:
